@@ -1,0 +1,9 @@
+{
+  "appId": "com.shiyi.yijing",
+  "appName": "时毅",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#f1ebda",
+    "allowMixedContent": false
+  }
+}

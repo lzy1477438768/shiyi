@@ -1,0 +1,16 @@
+{
+  "name": "时毅",
+  "short_name": "时毅",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#f1ebda",
+  "background_color": "#f1ebda",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

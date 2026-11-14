@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f1ebda">
+<title>时毅</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>
+if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+<style>
+  :root{
+    --ink:#2a2721; --ink-soft:#57503f; --ink-faint:#9a917c;
+    --paper:#f1ebda; --card:rgba(255,253,244,.62);
+    --seal:#a62b22; --line:rgba(42,39,33,.28);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    overflow:hidden;
+    background:
+      radial-gradient(ellipse 80% 50% at 15% 0%, rgba(120,105,70,.07), transparent 60%),
+      radial-gradient(ellipse 70% 45% at 90% 100%, rgba(60,58,45,.06), transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family:"STKaiti","KaiTi","STSong","SimSun",serif;
+    font-size:14px; line-height:1.5;
+  }
+  .wrap{
+    max-width:480px; height:100vh; height:100dvh; margin:0 auto;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column;
+  }
+
+  /* 顶栏：标题 + 印章 + 页签 */
+  .topbar{
+    flex:none; display:flex; align-items:center; justify-content:space-between;
+    position:relative; padding-bottom:8px; margin-bottom:8px;
+  }
+  .topbar::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--ink) 10%, var(--ink) 88%, transparent);
+    opacity:.75;
+  }
+  .brand{display:flex; align-items:center; gap:8px;}
+  .brand h1{
+    font-family:"STXingkai","STKaiti","KaiTi",serif;
+    font-size:21px; letter-spacing:5px; font-weight:bold;
+  }
+  .seal{
+    width:22px; height:22px; border-radius:3px; transform:rotate(-4deg);
+    background:var(--seal); color:#f7efdd; font-size:12px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 2px rgba(40,20,10,.35); letter-spacing:0;
+  }
+  .tabs{display:flex; border:1px solid var(--ink); border-radius:4px; overflow:hidden;}
+  .tabs button{
+    border:none; background:transparent; color:var(--ink);
+    font-family:inherit; font-size:13px; padding:5px 11px; letter-spacing:1px; cursor:pointer;
+  }
+  .tabs button.on{background:var(--ink); color:var(--paper);}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:3px;
+    padding:10px 12px; box-shadow:0 2px 6px rgba(50,45,30,.10);
+  }
+  input{
+    width:100%; background:rgba(255,254,247,.8); border:1px solid var(--line);
+    border-radius:3px; padding:7px 8px; font-size:16px; font-family:inherit; color:var(--ink);
+  }
+  input:focus{outline:1.5px solid var(--ink);}
+  .row{display:flex; gap:6px;}
+  .row>*{flex:1; min-width:0;}
+  .btns{display:flex; gap:6px; margin-top:8px;}
+  button{
+    border:none; border-radius:3px; font-family:inherit; cursor:pointer; letter-spacing:3px;
+  }
+  .btns button{flex:1; padding:9px 0; font-size:15px;}
+  .btn-ink{background:var(--ink); color:var(--paper);}
+  .btn-seal{background:var(--seal); color:#f7efdd;}
+  .btn-sub{background:transparent; color:var(--ink); border:1px solid var(--line)!important;}
+  button:disabled{opacity:.4; cursor:default;}
+  button:active:not(:disabled){opacity:.75;}
+
+  /* 起卦页布局：输入卡固定，结果卡撑满剩余 */
+  #pageCalc{flex:1; display:flex; flex-direction:column; min-height:0;}
+  #inputCard{flex:none; margin-bottom:8px;}
+  #resultCard{
+    flex:1; min-height:0; overflow-y:auto; margin-bottom:0;
+    display:flex; flex-direction:column; justify-content:space-evenly;
+  }
+
+  /* 卦象区 */
+  .hexgrid{display:flex; justify-content:space-between;}
+  .hexcol{flex:1; display:flex; flex-direction:column; align-items:center;}
+  .hexhead{font-size:12px; color:var(--ink-soft); letter-spacing:3px; margin-bottom:4px;}
+  .hexbody{display:flex; align-items:stretch; gap:7px;}
+  .sixlines{display:flex; flex-direction:column-reverse; gap:5px;}
+  .yao{width:42px; height:7px; display:flex; justify-content:space-between;}
+  .yao i{display:block; height:100%; background:var(--ink); border-radius:2px;}
+  .yao.solid i{width:100%;}
+  .yao.broken i{width:43%;}
+  .yao.moving i{background:var(--seal);}
+  .glabels{display:flex; flex-direction:column;}
+  .glbl{
+    flex:1; display:flex; align-items:center;
+    font-size:15px; font-weight:bold; letter-spacing:1px; white-space:nowrap;
+  }
+  .ti-badge{
+    display:inline-block; font-size:10px; font-weight:normal; line-height:1;
+    background:var(--seal); color:#f7efdd; border-radius:8px;
+    padding:2px 5px; margin-left:3px; vertical-align:2px;
+  }
+  .hexname{font-size:14px; font-weight:bold; margin-top:5px; letter-spacing:1px;}
+
+  /* 占位：未排盘时的大"易" */
+  .placeholder-yi{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    font-family:"STXingkai","STKaiti","KaiTi",serif;
+    font-size:120px; color:rgba(42,39,33,.07); user-select:none;
+  }
+
+  /* 卦义 */
+  .guayi{border-top:1px dashed var(--line); padding-top:6px; font-size:13px;}
+  .guayi .row-line{display:flex; gap:6px; line-height:1.7;}
+  .gy-tag{
+    flex:none; font-size:11px; color:var(--paper); background:var(--ink-soft);
+    border-radius:2px; padding:0 4px; height:17px; line-height:17px; margin-top:2px;
+  }
+  .guayi b{margin-right:4px;}
+  .guayi span{color:var(--ink-soft);}
+
+  /* 事项 + 保存 */
+  .qrow{display:flex; gap:6px; align-items:center;}
+  .qlabel{flex:none; font-size:13px; color:var(--ink-soft); letter-spacing:1px;}
+  .qrow input{flex:1;}
+  .qrow button{flex:none; padding:8px 14px; font-size:14px;}
+
+  /* 记录列表（位于记录浮层内） */
+  .rec-body{flex:1; min-height:0; display:flex; flex-direction:column;}
+  #histCard{flex:1; display:flex; flex-direction:column; min-height:0; margin-bottom:0;}
+  .range-row{display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+  .range-row input[type=date]{flex:1; min-width:0; padding:5px 4px; font-size:13px;}
+  .range-row span{color:var(--ink-soft);}
+  .hist-count{font-size:12px; white-space:nowrap; letter-spacing:1px;}
+  #histList{flex:1; min-height:0; overflow-y:auto;}
+  .group-head{
+    font-size:12px; color:var(--ink-soft); border-bottom:1px solid var(--line);
+    padding:4px 0 2px; margin-top:2px; letter-spacing:1px;
+  }
+  .hist-item{border-bottom:1px dashed var(--line); padding:6px 2px; cursor:pointer;}
+  .hist-top{display:flex; align-items:flex-start; gap:6px;}
+  .hist-q{flex:1; font-size:14px; min-width:0; word-break:break-word; overflow-wrap:anywhere; line-height:1.4;}
+  .hist-q.empty-q{color:var(--ink-faint);}
+  .edit-btn{
+    flex:none; background:transparent; border:1px solid var(--line)!important; color:var(--ink-soft);
+    font-size:11px; padding:2px 8px; border-radius:3px; letter-spacing:1px;
+  }
+  .edit-btn.del{border-color:rgba(166,43,34,.5)!important; color:var(--seal);}
+  .judge-btn{
+    flex:none; background:transparent; border:1px solid var(--line)!important; color:var(--ink-soft);
+    font-size:11px; padding:2px 8px; border-radius:3px; letter-spacing:1px; min-width:36px;
+  }
+  .judge-btn.j-on{background:var(--seal); color:#f7efdd; border-color:var(--seal)!important;}
+  .judge-btn.j-err{background:var(--ink); color:var(--paper); border-color:var(--ink)!important;}
+  .edit-row{flex:1; display:flex; gap:6px; align-items:center;}
+  .edit-row input{flex:1; padding:5px 6px; font-size:14px;}
+  .edit-row button{
+    flex:none; width:30px; height:28px; font-size:13px; border-radius:3px;
+    background:var(--ink); color:var(--paper);
+  }
+  .edit-row button.cancel{background:transparent; border:1px solid var(--line); color:var(--ink);}
+  .hist-meta{font-size:12.5px; color:var(--ink-soft); margin-top:1px;}
+  .hist-meta b{font-size:12.5px;}
+  .pk-hist-item{cursor:default;}
+  .gz-sep{color:var(--ink-faint); margin:0 3px; font-size:11px;}
+  .ti-mark{
+    display:inline-block; font-size:10px; background:var(--seal); color:#f7efdd;
+    border-radius:6px; padding:0 4px; margin-right:3px; vertical-align:1px;
+  }
+  .empty{color:var(--ink-faint); text-align:center; padding:20px 0; font-size:13px;}
+
+  /* 对/错统计栏 */
+  .hist-stats{margin-bottom:6px;}
+  .hs-bar{display:flex; height:5px; border-radius:3px; overflow:hidden; background:#dcd5c0; margin-bottom:3px;}
+  .hs-bar i{display:block; height:100%;}
+  .hs-txt{font-size:12px; color:var(--ink-soft); letter-spacing:1px;}
+
+  /* 导出/导入 */
+  .io-row{display:flex; gap:6px; margin-top:8px;}
+  .io-row button{flex:1; padding:7px 0; font-size:14px;}
+  .mask{
+    position:fixed; inset:0; z-index:99; padding:18px;
+    background:rgba(30,28,22,.5); display:flex; align-items:center; justify-content:center;
+  }
+  .io-card{
+    width:100%; max-width:440px; padding:12px;
+    background:var(--paper); border:1px solid var(--line); border-radius:3px;
+    box-shadow:0 6px 20px rgba(30,25,15,.35);
+  }
+  .io-title{font-size:15px; font-weight:bold; letter-spacing:2px; margin-bottom:8px;}
+  .io-card textarea{
+    width:100%; resize:none; background:rgba(255,254,247,.9); border:1px solid var(--line);
+    border-radius:3px; padding:8px; font-family:inherit; font-size:13px; line-height:1.6; color:var(--ink);
+  }
+  .io-btns{display:flex; gap:6px; margin-top:8px;}
+  .io-btns button{flex:1; padding:8px 0; font-size:14px; border-radius:3px;}
+
+  /* 入口卡片 + 浮层 */
+  .entry-card{display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:8px;}
+  .entry-card:hover{box-shadow:0 2px 10px rgba(50,45,30,.15);}
+  .entry-title{font-size:17px; font-weight:bold; letter-spacing:2px;}
+  .entry-sub{font-size:12px; color:var(--ink-soft); letter-spacing:1px; margin-top:2px;}
+  .entry-btn{
+    flex:none; border:none; border-radius:999px; background:var(--ink); color:var(--paper);
+    padding:10px 22px; font-size:14px; letter-spacing:2px;
+  }
+  .calc-panel{
+    width:100%; max-width:440px; height:88vh; height:min(88dvh, 720px);
+    display:flex; flex-direction:column; min-height:0;
+    background:var(--paper); border:1px solid var(--line); border-radius:4px;
+    box-shadow:0 6px 24px rgba(30,25,15,.35); padding:12px;
+  }
+  .panel-head{flex:none; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .panel-title{font-size:16px; font-weight:bold; letter-spacing:3px;}
+  .panel-close{
+    border:1px solid var(--line); background:transparent; color:var(--ink-soft);
+    font-size:12px; padding:5px 14px; border-radius:999px; letter-spacing:1px;
+  }
+  .pk-save-row{margin-top:8px; flex:none;}
+  .pk-save-row button{flex:none; padding:8px 16px; font-size:14px;}
+
+  /* 四柱页 */
+  #pagePillars{flex:1; display:flex; flex-direction:column; min-height:0;}
+  .rec-btn{flex:none; margin-top:10px; padding:9px 0; font-size:14px;}
+  .pk-toprow{flex:none; display:flex; align-items:center; gap:8px;}
+  .pk-toprow .pk-heads{flex:1; min-width:0; margin-top:0;}
+  #pagePillars .pk-today{width:30px; height:30px; font-size:13px; font-family:inherit;}
+  #pagePillars .pk-heads{flex:none; margin-top:2px;}
+  #pagePillars .pk-wheel{flex:none; height:192px; margin-top:2px;}
+  .pk-result-body{flex:none;}
+  #pkHistCard{flex:1; min-height:0; display:flex; flex-direction:column;}
+  #pkHistList{flex:1; min-height:0; overflow-y:auto; margin-top:6px;}
+  .pk-picker{flex:1; min-height:0; display:flex; flex-direction:column;}
+  .pk-top{flex:none; display:flex; align-items:center; gap:8px;}
+  .pk-seg{flex:1; min-width:0; display:flex; padding:3px; border-radius:999px; background:rgba(42,39,33,.06);}
+  .pk-seg button{
+    flex:1; min-width:0; border:none; background:transparent; color:var(--ink-faint);
+    border-radius:999px; padding:8px 2px; font-size:14px; letter-spacing:1px;
+  }
+  .pk-seg button.on{background:var(--ink); color:var(--paper);}
+  .pk-today{
+    flex:none; width:38px; height:38px; border:none; border-radius:50%;
+    background:rgba(42,39,33,.06); color:var(--ink); font-size:15px; letter-spacing:0;
+  }
+  .pk-ok{
+    flex:none; height:40px; padding:0 18px; border:none; border-radius:999px;
+    background:var(--ink); color:var(--paper); font-size:15px; letter-spacing:2px;
+  }
+  .pk-search{
+    flex:none; display:flex; align-items:center; gap:6px; margin-top:10px;
+    padding:3px 3px 3px 14px; border-radius:999px; background:rgba(42,39,33,.05);
+  }
+  .pk-search input{flex:1; min-width:0; border:none; background:transparent; font-size:14px; padding:8px 0; color:var(--ink);}
+  .pk-search input:focus{outline:none;}
+  .pk-search button{
+    flex:none; border:none; border-radius:999px; padding:9px 16px;
+    background:rgba(255,253,244,.92); color:var(--ink); font-size:14px; letter-spacing:1px;
+    box-shadow:0 1px 2px rgba(50,45,30,.08);
+  }
+  .pk-heads{flex:none; display:flex; margin-top:12px;}
+  .pk-heads>div{
+    flex:1; min-width:0; text-align:center; font-size:12.5px;
+    color:var(--ink-soft); letter-spacing:2px; white-space:nowrap;
+  }
+  .pk-sort{
+    border:none; background:transparent; color:var(--ink-soft);
+    font-size:12px; padding:0 2px; letter-spacing:0; vertical-align:1px;
+  }
+  .pk-wheel{
+    flex:1; min-height:0; position:relative; overflow:hidden; margin-top:2px;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 20%, #000 80%, transparent 100%);
+    mask-image:linear-gradient(to bottom, transparent 0, #000 20%, #000 80%, transparent 100%);
+  }
+  .pk-band{
+    position:absolute; left:0; right:0; top:calc(50% - 32px); height:64px;
+    border-radius:10px; background:rgba(42,39,33,.065); pointer-events:none;
+  }
+  .pk-cols{position:relative; height:100%; display:flex;}
+  .pk-col{flex:1; min-width:0; height:100%;}
+  .pk-scroll{
+    height:100%; overflow-y:auto; overflow-x:hidden;
+    scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .pk-scroll::-webkit-scrollbar{display:none;}
+  .pk-item{
+    height:64px; display:flex; align-items:center; justify-content:center;
+    color:var(--ink-faint); font-size:19px; line-height:1; white-space:nowrap;
+    transition:color .12s, font-size .12s;
+  }
+  .pk-item.on{color:var(--ink); font-size:25px; font-weight:bold;}
+  .pk-result{flex:1; min-height:0; display:flex; flex-direction:column;}
+  .pk-result-top{flex:none; display:flex; align-items:center; justify-content:space-between; padding-bottom:6px;}
+  .pk-result-title{font-size:12.5px; color:var(--ink-soft); letter-spacing:2px;}
+  .pk-back{
+    border:1px solid var(--line); background:transparent; color:var(--ink-soft);
+    font-size:12px; padding:5px 12px; border-radius:999px; letter-spacing:1px;
+  }
+  .pk-result-body{flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center;}
+  .pillar-grid{width:100%; display:flex;}
+  .pl-col{flex:1; min-width:0; text-align:center;}
+  .pl-col + .pl-col{border-left:1px dashed var(--line);}
+  .pl-head{font-size:12.5px; color:var(--ink-soft); letter-spacing:3px;}
+  .pl-gan,.pl-zhi{font-size:40px; line-height:1.18; font-weight:bold;}
+  .pl-gan{margin-top:4px;}
+  .pl-note{margin-top:14px; font-size:12.5px; color:var(--ink-soft); letter-spacing:1px; text-align:center;}
+  .pl-note b{color:var(--ink);}
+  .pl-sub{margin-top:6px; font-size:11px; color:var(--ink-faint); letter-spacing:.5px; text-align:center; line-height:1.6;}
+  /* 每柱下的公历 / 农历小字 */
+  .pl-div{height:1px; background:var(--line); margin:7px 4px 5px; opacity:.5;}
+  .pl-line{font-size:11px; line-height:17px; letter-spacing:.5px; white-space:nowrap;}
+  .pl-line.g{color:var(--ink-soft);}
+  .pl-line.l{color:var(--ink-faint);}
+</style>
+<script src="/_aistudio-iframe.js?v=1f94f900"></script></head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><h1>时毅</h1><span class="seal">易</span></div>
+    <div class="tabs">
+      <button id="tabCalc" class="on" onclick="switchTab('calc')">起卦</button>
+      <button id="tabPillars" onclick="switchTab('pillars')">四柱</button>
+    </div>
+  </div>
+
+  <!-- ===== 起卦页 ===== -->
+  <div id="pageCalc">
+    <div class="card" id="inputCard">
+      <div class="row">
+        <input id="in1" type="number" min="1" max="8" inputmode="numeric" placeholder="上卦数1-8">
+        <input id="in2" type="number" min="1" max="8" inputmode="numeric" placeholder="下卦数1-8">
+        <input id="in3" type="number" min="1" max="6" inputmode="numeric" placeholder="动爻数1-6">
+      </div>
+      <div class="btns">
+        <button class="btn-ink" onclick="randomFill()">随机起卦</button>
+        <button class="btn-sub" onclick="doCalc()">开始排盘</button>
+        <button class="btn-sub" onclick="openHist()">历史记录</button>
+      </div>
+    </div>
+    <div class="card" id="resultCard">
+      <div class="hexgrid" id="hexGrid"></div>
+      <div class="guayi" id="guayi" style="display:none;"></div>
+      <div class="qrow" id="qRow" style="display:none;">
+        <span class="qlabel">事项</span>
+        <input id="question2">
+        <button class="btn-seal" id="saveBtn" onclick="doSave()">保存</button>
+      </div>
+      <div class="placeholder-yi" id="placeholderYi">易</div>
+    </div>
+  </div>
+
+  <!-- ===== 四柱页 ===== -->
+  <div id="pagePillars" style="display:none;">
+    <div class="card">
+      <div class="pk-toprow">
+        <div class="pk-heads" id="pkHeads"></div>
+        <button class="pk-today" onclick="pkTodayInline()">今</button>
+      </div>
+      <div class="pk-wheel" id="pkWheel">
+        <div class="pk-band"></div>
+        <div class="pk-cols" id="pkCols"></div>
+      </div>
+      <div class="pk-result-body">
+        <div class="pillar-grid" id="pillarGrid"></div>
+      </div>
+      <div class="pl-note" id="pillarNote"></div>
+      <div class="qrow pk-save-row">
+        <span class="qlabel">备注</span>
+        <input id="pkNote">
+        <button class="btn-seal" id="pkSaveBtn" onclick="savePkRecord()">保存</button>
+      </div>
+    </div>
+    <button class="btn-sub rec-btn" onclick="openRecords()">历史记录</button>
+  </div>
+</div>
+
+<!-- 历史记录浮层（六爻） -->
+<div class="mask" id="histMask" style="display:none;" onclick="if(event.target===this)closeHist()">
+  <div class="calc-panel">
+    <div class="panel-head">
+      <span class="panel-title">历史记录</span>
+      <button class="panel-close" onclick="closeHist()">关闭</button>
+    </div>
+    <div class="rec-body">
+      <div class="card" id="histCard">
+        <div class="range-row">
+          <input type="date" id="dateStart" onchange="onRangeInput()">
+          <span>~</span>
+          <input type="date" id="dateEnd" onchange="onRangeInput()">
+          <span class="hist-count" id="histCount"></span>
+        </div>
+        <div class="hist-stats" id="histStats"></div>
+        <div id="histList"></div>
+        <div class="io-row">
+          <button class="btn-sub" onclick="openExport()">导出</button>
+          <button class="btn-sub" onclick="openImport()">导入</button>
+          <button class="btn-sub" onclick="clearHist()">清空</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 四柱记录浮层 -->
+<div class="mask" id="recMask" style="display:none;" onclick="if(event.target===this)closeRecords()">
+  <div class="calc-panel">
+    <div class="panel-head">
+      <span class="panel-title">四柱记录</span>
+      <button class="panel-close" onclick="closeRecords()">关闭</button>
+    </div>
+    <div class="rec-body">
+      <div class="card" id="pkHistCard">
+        <div class="range-row">
+          <input type="date" id="pkDateStart" onchange="onPkRangeInput()">
+          <span>~</span>
+          <input type="date" id="pkDateEnd" onchange="onPkRangeInput()">
+          <span class="hist-count" id="pkHistCount"></span>
+        </div>
+        <div id="pkHistList"></div>
+        <div class="io-row">
+          <button class="btn-sub" onclick="clearPkHist()">清空</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 导出/导入浮层 -->
+<div class="mask" id="ioMask" style="display:none;" onclick="if(event.target===this)closeIO()">
+  <div class="io-card">
+    <div class="io-title" id="ioTitle"></div>
+    <textarea id="ioText" rows="12" spellcheck="false"></textarea>
+    <div class="io-btns" id="ioBtns"></div>
+  </div>
+</div>
+
+<script>
+/* ================= 数据（与 Godot 源码一致） ================= */
+const guas = [
+  {name:"乾金", i:[1,1,1]},
+  {name:"兑金", i:[0,1,1]},
+  {name:"离火", i:[1,0,1]},
+  {name:"震木", i:[0,0,1]},
+  {name:"巽木", i:[1,1,0]},
+  {name:"坎水", i:[0,1,0]},
+  {name:"艮土", i:[1,0,0]},
+  {name:"坤土", i:[0,0,0]}
+];
+/* 五行配色：提高卦旁标注辨识度 */
+const EL_COLOR = {"金":"#8a6d1d","木":"#33691e","水":"#1a5276","火":"#a62b22","土":"#6d4c2f"};
+
+/* 64 卦名表：[上卦序号][下卦序号]，顺序 乾兑离震巽坎艮坤 */
+const HEX64 = [
+  ["乾为天","天泽履","天火同人","天雷无妄","天风姤","天水讼","天山遁","天地否"],
+  ["泽天夬","兑为泽","泽火革","泽雷随","泽风大过","泽水困","泽山咸","泽地萃"],
+  ["火天大有","火泽睽","离为火","火雷噬嗑","火风鼎","火水未济","火山旅","火地晋"],
+  ["雷天大壮","雷泽归妹","雷火丰","震为雷","雷风恒","雷水解","雷山小过","雷地豫"],
+  ["风天小畜","风泽中孚","风火家人","风雷益","巽为风","风水涣","风山渐","风地观"],
+  ["水天需","水泽节","水火既济","水雷屯","水风井","坎为水","水山蹇","水地比"],
+  ["山天大畜","山泽损","山火贲","山雷颐","山风蛊","山水蒙","艮为山","山地剥"],
+  ["地天泰","地泽临","地火明夷","地雷复","地风升","地水师","地山谦","坤为地"]
+];
+
+/* 64 卦简义 */
+const HEX_YI = {
+"乾为天":"刚健中正，自强不息","天泽履":"如履虎尾，谨慎前行","天火同人":"和同于人，亨通利涉",
+"天雷无妄":"守正无妄，不可妄为","天风姤":"阴遇于阳，防微杜渐","天水讼":"争讼不利，以和为贵",
+"天山遁":"退避保全，急流勇退","天地否":"闭塞不通，守以待时","泽天夬":"决断果敢，以正除邪",
+"兑为泽":"喜悦和顺，朋友讲习","泽火革":"变革去故，顺天应人","泽雷随":"随时顺势，择善而从",
+"泽风大过":"负重过甚，刚柔相济","泽水困":"身处困境，守志待时","泽山咸":"交感相应，柔上刚下",
+"泽地萃":"荟萃聚集，顺势聚众","火天大有":"大有所获，富有谦守","火泽睽":"乖离睽违，求同存异",
+"离为火":"光明依附，柔顺得中","火雷噬嗑":"咬合排障，明法正刑","火风鼎":"鼎新稳重，养贤图治",
+"火水未济":"事未完成，慎终如始","火山旅":"行旅在外，柔顺谦下","火地晋":"晋升光明，依附而上",
+"雷天大壮":"强盛壮大，守正勿躁","雷泽归妹":"归妹非正，知敝慎行","雷火丰":"丰盛盛大，防盛极衰",
+"震为雷":"震动奋发，临危不乱","雷风恒":"恒久不已，守常立德","雷水解":"险难得解，赦过宥罪",
+"雷山小过":"小有过越，宜下不宜上","雷地豫":"安逸和乐，备豫不虞","风天小畜":"小有蓄聚，密云不雨",
+"风泽中孚":"诚信感通，孚于内外","风火家人":"家道正齐，各安其位","风雷益":"增益利涉，损上益下",
+"巽为风":"谦逊如风，申命行事","风水涣":"涣散重聚，拯涣利涉","风山渐":"循序渐进，稳中求进",
+"风地观":"观瞻省察，下观而化","水天需":"需待时机，饮食宴乐","水泽节":"节制有度，苦节不可",
+"水火既济":"事已成济，思患预防","水雷屯":"创始艰难，宜守宜建","水风井":"井养不穷，修己惠人",
+"坎为水":"险陷重重，行险守信","水山蹇":"蹇难在前，反身修德","水地比":"亲比辅佐，择善而依",
+"山天大畜":"大有蓄止，养贤蓄德","山泽损":"损下益上，惩忿窒欲","山火贲":"文饰修饰，质文相宜",
+"山雷颐":"颐养正道，慎言节欲","山风蛊":"蛊坏待治，整饬振弊","山水蒙":"蒙昧初开，启蒙发智",
+"艮为山":"静止守止，思不出位","山地剥":"剥落衰败，厚下安宅","地天泰":"天地交泰，上下和同",
+"地泽临":"临下督导，教思无穷","地火明夷":"光明受损，晦而转明","地雷复":"一阳来复，反复其道",
+"地风升":"柔顺上升，积小成大","地水师":"兴师动众，老成持重","地山谦":"谦谦君子，裒多益寡",
+"坤为地":"厚德载物，柔顺包容"
+};
+
+/* ================= 核心逻辑（严格复刻源码） ================= */
+function matchGua(arr){
+  for(const g of guas) if(g.i[0]===arr[0]&&g.i[1]===arr[1]&&g.i[2]===arr[2]) return g;
+  return null;
+}
+function guaIdx(name){ return guas.findIndex(g=>g.name===name); }
+function hexName(upName, lowName){ return HEX64[guaIdx(upName)][guaIdx(lowName)]; }
+
+function calc(q, w, e){
+  let a = q % 8, b = w % 8, c = e % 6;
+  if(a===0) a=8;
+  if(b===0) b=8;
+
+  // 本卦
+  const ben = [
+    {name:guas[a-1].name, i:guas[a-1].i.slice()},
+    {name:guas[b-1].name, i:guas[b-1].i.slice()}
+  ];
+  // 互卦
+  const hu = [
+    {i:[ben[0].i[1], ben[0].i[2], ben[1].i[0]]},
+    {i:[ben[0].i[2], ben[1].i[0], ben[1].i[1]]}
+  ];
+  hu[0].name = matchGua(hu[0].i).name;
+  hu[1].name = matchGua(hu[1].i).name;
+  // 变卦
+  const bian = [
+    {name:ben[0].name, i:ben[0].i.slice()},
+    {name:ben[1].name, i:ben[1].i.slice()}
+  ];
+  switch(c){
+    case 0: bian[0].i[0] = 1-bian[0].i[0]; break;
+    case 5: bian[0].i[1] = 1-bian[0].i[1]; break;
+    case 4: bian[0].i[2] = 1-bian[0].i[2]; break;
+    case 3: bian[1].i[0] = 1-bian[1].i[0]; break;
+    case 2: bian[1].i[1] = 1-bian[1].i[1]; break;
+    case 1: bian[1].i[2] = 1-bian[1].i[2]; break;
+  }
+  bian[0].name = matchGua(bian[0].i).name;
+  bian[1].name = matchGua(bian[1].i).name;
+  // 体卦
+  const ti = (c>=1 && c<=3) ? ben[0] : ben[1];
+
+  return {
+    ben, hu, bian, ti, c,
+    benHex: hexName(ben[0].name, ben[1].name),
+    huHex:  hexName(hu[0].name,  hu[1].name),
+    bianHex:hexName(bian[0].name,bian[1].name)
+  };
+}
+
+/* ================= 四柱（天干地支） ================= */
+const GAN = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const ZHI = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const GAN_EL = ["木","木","火","火","土","土","金","金","水","水"];
+const ZHI_EL = ["水","土","木","木","土","火","火","土","金","金","土","水"];
+const SHENGXIAO = ["鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"];
+const mod = (n, m)=>((n%m)+m)%m;
+
+/* 公历年月日时（视作北京时间）→ 儒略日 JD（按 UT 计） */
+function jdFromYMD(y, mo, da, h, mi){
+  if(mo<=2){ y--; mo+=12; }
+  const A = Math.floor(y/100), B = 2 - A + Math.floor(A/4);
+  return Math.floor(365.25*(y+4716)) + Math.floor(30.6001*(mo+1)) + da + B - 1524.5 + (h+(mi||0)/60)/24;
+}
+/* 太阳视黄经（度，0=春分） */
+function sunLon(jd){
+  const T = (jd - 2451545.0)/36525, rad = Math.PI/180;
+  const L0 = 280.46646 + 36000.76983*T + 0.0003032*T*T;
+  const M = (357.52911 + 35999.05029*T - 0.0001537*T*T)*rad;
+  const C = (1.914602 - 0.004817*T - 0.000014*T*T)*Math.sin(M)
+          + (0.019993 - 0.000101*T)*Math.sin(2*M)
+          + 0.000289*Math.sin(3*M);
+  const om = (125.04 - 1934.136*T)*rad;
+  return mod(L0 + C - 0.00569 - 0.00478*Math.sin(om), 360);
+}
+/* 某公历年某节气（黄经 ang）的北京时间戳；gm/gd 为初算月日 */
+function termStamp(year, ang, gm, gd){
+  let jd = jdFromYMD(year, gm, gd, 0, 0);
+  for(let i=0;i<10;i++){
+    const diff = mod(ang - sunLon(jd) + 180, 360) - 180;
+    jd += diff/0.9856473;
+  }
+  return (jd - 2440587.5)*86400000 + 8*3600000;
+}
+/* 十二"节"：月柱分界，索引即月支偏移（0=寅月，10=子月，11=丑月） */
+const JIE = [
+  {ang:315, gm:2,  gd:4}, {ang:345, gm:3,  gd:6}, {ang:15,  gm:4,  gd:5}, {ang:45,  gm:5,  gd:6},
+  {ang:75,  gm:6,  gd:6}, {ang:105, gm:7,  gd:7}, {ang:135, gm:8,  gd:8}, {ang:165, gm:9,  gd:8},
+  {ang:195, gm:10, gd:8}, {ang:225, gm:11, gd:7}, {ang:255, gm:12, gd:7}, {ang:285, gm:1,  gd:6}
+];
+function pillarsOf(y, mo, da, h, mi){
+  const stamp = Date.UTC(y, mo-1, da, h, mi);
+  // 年柱：以立春为界
+  const solarYear = stamp < termStamp(y, 315, 2, 4) ? y-1 : y;
+  const yGan = mod(solarYear-4, 10), yZhi = mod(solarYear-4, 12);
+  // 月柱：取此前最近的"节"，五虎遁起月干
+  let off = 0;
+  for(let i=0;i<12;i++){
+    const ty = (i===11) ? solarYear+1 : solarYear;   // 小寒落在次年1月
+    if(stamp >= termStamp(ty, JIE[i].ang, JIE[i].gm, JIE[i].gd)) off = i;
+  }
+  const mGan = mod(yGan%5*2 + 2 + off, 10);
+  const mZhi = mod(off + 2, 12);
+  // 日柱：23点（子时）换日
+  let dy=y, dm=mo, dd=da;
+  if(h>=23){
+    const t = new Date(Date.UTC(y, mo-1, da));
+    t.setUTCDate(t.getUTCDate()+1);
+    dy=t.getUTCFullYear(); dm=t.getUTCMonth()+1; dd=t.getUTCDate();
+  }
+  const dayIdx = mod(Math.round(jdFromYMD(dy, dm, dd, 12, 0)) - 2433191, 60);
+  const dGan = dayIdx%10;
+  // 时柱：五鼠遁起时干
+  const hZhi = Math.floor(mod(h+1, 24)/2);
+  const hGan = mod(dGan%5*2 + hZhi, 10);
+  return {
+    year:[yGan, yZhi], month:[mGan, mZhi], day:[dGan, dayIdx%12], hour:[hGan, hZhi],
+    dayGan:dGan, sx:yZhi
+  };
+}
+
+/* 六十甲子 / 农历换算 */
+const GZ60 = (()=>{ const a=[]; for(let i=0;i<60;i++) a.push(GAN[i%10]+ZHI[i%12]); return a; })();
+function gzIdx(g, z){ for(let i=0;i<60;i++) if(i%10===g && i%12===z) return i; return 0; }
+function daysInMonth(y, m){ return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+
+const LUNAR_MONTH = {1:"正月",2:"二月",3:"三月",4:"四月",5:"五月",6:"六月",7:"七月",8:"八月",9:"九月",10:"十月",11:"十一月",12:"腊月"};
+const LUNAR_CACHE = {};
+let LUNAR_FMT = null;
+try{
+  LUNAR_FMT = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
+    year:"numeric", month:"long", day:"numeric", timeZone:"Asia/Shanghai"
+  });
+}catch(e){ LUNAR_FMT = null; }
+
+function cnToInt(s){
+  if(!s) return 0;
+  if(/^\d+$/.test(s)) return parseInt(s,10);
+  const n = {"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10};
+  if(s.indexOf("廿") === 0) return 20 + (n[s.slice(1)] || 0);
+  s = s.replace("初","");
+  if(s === "十") return 10;
+  if(s.indexOf("十") === 0) return 10 + (n[s[1]] || 0);
+  if(s.length > 1 && s[1] === "十") return (n[s[0]] || 0) * 10 + (n[s[2]] || 0);
+  return n[s] || 0;
+}
+function lunarMonthNum(name){
+  name = String(name || "").replace("闰", "");
+  return {"正月":1,"一月":1,"二月":2,"三月":3,"四月":4,"五月":5,"六月":6,"七月":7,"八月":8,"九月":9,"十月":10,"十一月":11,"十二月":12,"腊月":12}[name] || 1;
+}
+/* 公历某日（取北京时间正午，避开零点换日）→ 农历 */
+function lunarPartsFromDate(y, m, d){
+  if(!LUNAR_FMT) return {y:m>2?y:y-1, m:1, d:1, leap:false};
+  const parts = LUNAR_FMT.formatToParts(new Date(Date.UTC(y, m-1, d, 4, 0)));
+  const get = t => (parts.find(x => x.type === t) || {}).value;
+  let mn = get("month") || "";
+  const leap = mn.indexOf("闰") === 0;
+  return {
+    y: parseInt(get("relatedYear") || get("year"), 10),
+    m: lunarMonthNum(mn),
+    d: cnToInt(get("day")),
+    leap
+  };
+}
+/* 农历年 → 各月天数（含闰月），用于滚轮与反查公历 */
+function lunarYearInfo(Y){
+  if(LUNAR_CACHE[Y]) return LUNAR_CACHE[Y];
+  let start = null;
+  for(let t = Date.UTC(Y,0,10); t <= Date.UTC(Y,2,20); t += 86400000){
+    const g = new Date(t);
+    const lp = lunarPartsFromDate(g.getUTCFullYear(), g.getUTCMonth()+1, g.getUTCDate());
+    if(lp.y === Y && lp.m === 1 && lp.d === 1 && !lp.leap){
+      start = {y:g.getUTCFullYear(), m:g.getUTCMonth()+1, d:g.getUTCDate()};
+      break;
+    }
+  }
+  if(!start) start = {y:Y, m:2, d:4};
+  const months = [];
+  let cur = null;
+  for(let i=0;i<400;i++){
+    const base = new Date(Date.UTC(start.y, start.m-1, start.d + i));
+    const lp = lunarPartsFromDate(base.getUTCFullYear(), base.getUTCMonth()+1, base.getUTCDate());
+    if(lp.y !== Y) break;
+    if(!cur || cur.m !== lp.m || cur.leap !== lp.leap){
+      if(cur) months.push(cur);
+      cur = {m:lp.m, leap:lp.leap, days:0};
+    }
+    cur.days++;
+  }
+  if(cur) months.push(cur);
+  const info = {start, months};
+  LUNAR_CACHE[Y] = info;
+  return info;
+}
+function lunarMonthIndex(info, m, leap){
+  let idx = info.months.findIndex(x => x.m === m && x.leap === leap);
+  if(idx < 0) idx = info.months.findIndex(x => x.m === m);
+  return idx < 0 ? 0 : idx;
+}
+function lunarToGreg(y, m, leap, d){
+  const info = lunarYearInfo(y);
+  const idx = lunarMonthIndex(info, m, leap);
+  const mo = info.months[idx];
+  const day = Math.min(d, mo.days);
+  let offset = 0;
+  for(let i=0;i<idx;i++) offset += info.months[i].days;
+  const g = new Date(Date.UTC(info.start.y, info.start.m-1, info.start.d + offset + day-1));
+  return {y:g.getUTCFullYear(), m:g.getUTCMonth()+1, d:g.getUTCDate()};
+}
+function lunarDayName(n){
+  const cn = ["","一","二","三","四","五","六","七","八","九","十"];
+  if(n <= 10) return "初" + cn[n];
+  if(n < 20) return "十" + cn[n-10];
+  if(n === 20) return "二十";
+  if(n < 30) return "廿" + cn[n-20];
+  return "三十";
+}
+
+/* ================= 界面渲染 ================= */
+function yaoDiv(v, moving){
+  return `<div class="yao ${v?"solid":"broken"}${moving?" moving":""}"><i></i><i></i></div>`;
+}
+/* 六爻卦：上卦三爻在顶、下卦三爻在底；c=动爻（1初爻…6上爻，0无） */
+function hexLinesHTML(pair, c){
+  // sixlines 容器是 column-reverse，所以先放下爻
+  const order = [
+    {g:pair[1], idx:2, cpos:1}, {g:pair[1], idx:1, cpos:2}, {g:pair[1], idx:0, cpos:3},
+    {g:pair[0], idx:2, cpos:4}, {g:pair[0], idx:1, cpos:5}, {g:pair[0], idx:0, cpos:6}
+  ];
+  return `<div class="sixlines">` +
+    order.map(o=>yaoDiv(o.g.i[o.idx], o.cpos===c)).join("") + `</div>`;
+}
+
+function render(r){
+  const movingPos = r.c === 0 ? 6 : r.c;  // 取模后0代表上爻(第6爻)
+  const tiSide = (r.ti === r.ben[0]) ? 0 : 1;  // 0=上卦为体 1=下卦为体
+  const lbl = (g, isTi)=>{
+    const base = g.name.slice(0,1), el = g.name.slice(1);
+    return `<div class="glbl" style="color:${EL_COLOR[el]}">${base}${el}${isTi?'<span class="ti-badge">体</span>':''}</div>`;
+  };
+  const col = (title, pair, hex, tiIdx, moving)=>{
+    return `<div class="hexcol">
+      <div class="hexhead">${title}</div>
+      <div class="hexbody">
+        ${hexLinesHTML(pair, moving)}
+        <div class="glabels">${lbl(pair[0], tiIdx===0)}${lbl(pair[1], tiIdx===1)}</div>
+      </div>
+      <div class="hexname">${hex}</div>
+    </div>`;
+  };
+  document.getElementById("hexGrid").innerHTML =
+    col("本卦", r.ben, r.benHex, tiSide, movingPos) +
+    col("互卦", r.hu, r.huHex, -1, -1) +
+    col("变卦", r.bian, r.bianHex, -1, -1);
+
+  const gy = (tag, hex)=>`<div class="row-line"><span class="gy-tag">${tag}</span><div><b>${hex}</b><span>${HEX_YI[hex]}</span></div></div>`;
+  const gyBox = document.getElementById("guayi");
+  gyBox.innerHTML = gy("本", r.benHex) + gy("互", r.huHex) + gy("变", r.bianHex);
+  gyBox.style.display = "block";
+
+  document.getElementById("qRow").style.display = "flex";
+  document.getElementById("placeholderYi").style.display = "none";
+}
+
+/* ================= 四柱滚轮 ================= */
+const ITEM_H = 64;
+const pad2 = n => String(n).padStart(2, "0");
+const PK = {
+  inited:false, rendered:false, mode:"greg", desc:false, view:"pick", adj:"t",
+  greg:null, lunar:null, pil:[0,0,0,0], defs:null, timer:0, snapTimers:[], wheelH:0, lastResult:null
+};
+
+function initPillars(){
+  if(PK.inited) return;
+  const now = new Date();
+  const y=now.getFullYear(), m=now.getMonth()+1, d=now.getDate(), h=now.getHours(), mi=now.getMinutes();
+  PK.greg = {y, m, d, h, min:mi, hu:false, minU:false};
+  if(LUNAR_FMT){
+    const lp = lunarPartsFromDate(y, m, d);
+    PK.lunar = {y:lp.y, m:lp.m, leap:lp.leap, d:lp.d, h, min:mi, hu:false, minU:false};
+  }else{
+    PK.lunar = {y, m:1, leap:false, d:1, h, min:mi, hu:false, minU:false};
+  }
+  const r = pillarsOf(y, m, d, h, mi);
+  PK.pil = [gzIdx(r.year[0],r.year[1]), gzIdx(r.month[0],r.month[1]), gzIdx(r.day[0],r.day[1]), gzIdx(r.hour[0],r.hour[1])];
+  PK.inited = true;
+}
+function pkDate(){ return PK.mode==="greg" ? PK.greg : PK.lunar; }
+function pkDateToGreg(s){
+  return PK.mode==="lunar" ? lunarToGreg(s.y, s.m, s.leap, s.d) : {y:s.y, m:s.m, d:s.d};
+}
+function pkCalcFromDate(){
+  const s = pkDate();
+  const g = pkDateToGreg(s);
+  const h = s.hu ? 0 : s.h;
+  const mi = (s.hu || s.minU) ? 0 : s.min;
+  const r = pillarsOf(g.y, g.m, g.d, h, mi);
+  if(s.hu) r.hour = null;
+  return r;
+}
+function pkCalcResult(){
+  if(PK.mode === "pillars"){
+    const p = PK.pil;
+    return {
+      year:[p[0]%10,p[0]%12], month:[p[1]%10,p[1]%12], day:[p[2]%10,p[2]%12], hour:[p[3]%10,p[3]%12],
+      dayGan:p[2]%10, sx:p[0]%12
+    };
+  }
+  return pkCalcFromDate();
+}
+function pkGregToLunar(){
+  const g = PK.greg;
+  const lp = lunarPartsFromDate(g.y, g.m, g.d);
+  PK.lunar = {y:lp.y, m:lp.m, leap:lp.leap, d:lp.d, h:g.h, min:g.min, hu:g.hu, minU:g.minU};
+}
+function pkLunarToGreg(){
+  const l = PK.lunar;
+  const g = lunarToGreg(l.y, l.m, l.leap, l.d);
+  PK.greg = {y:g.y, m:g.m, d:g.d, h:l.h, min:l.min, hu:l.hu, minU:l.minU};
+}
+
+/* 滚轮列数据 */
+function buildPkDefs(){
+  if(PK.mode === "pillars"){
+    return [
+      {head:"年柱", vals:GZ60, sel:PK.pil[0], kind:"gz"},
+      {head:"月柱", vals:GZ60, sel:PK.pil[1], kind:"gz"},
+      {head:"日柱", vals:GZ60, sel:PK.pil[2], kind:"gz"},
+      {head:"时柱", vals:GZ60, sel:PK.pil[3], kind:"gz"}
+    ];
+  }
+  const s = pkDate();
+  const years = [];
+  for(let y=1900; y<=2100; y++) years.push(y);
+  if(PK.desc) years.reverse();
+  let months, msel, days, dsel;
+  if(PK.mode === "greg"){
+    months = [];
+    for(let i=1;i<=12;i++) months.push(i);
+    msel = s.m-1;
+    const dm = daysInMonth(s.y, s.m);
+    days = [];
+    for(let i=1;i<=dm;i++) days.push(i);
+    dsel = Math.min(s.d, dm)-1;
+  }else{
+    const info = lunarYearInfo(s.y);
+    months = info.months.map(mo => ({label:(mo.leap?"闰":"") + LUNAR_MONTH[mo.m], m:mo.m, leap:mo.leap}));
+    msel = lunarMonthIndex(info, s.m, s.leap);
+    const mo = info.months[msel];
+    days = [];
+    for(let i=1;i<=mo.days;i++) days.push(i);
+    dsel = Math.min(s.d, mo.days)-1;
+  }
+  const hours = [];
+  for(let i=0;i<24;i++) hours.push(i);
+  hours.push("未知");
+  const minutes = [];
+  for(let i=0;i<60;i++) minutes.push(i);
+  minutes.push("未知");
+  return [
+    {head:"年", vals:years, sel:Math.max(0, years.indexOf(s.y)), kind:"year", sortable:true},
+    {head:"月", vals:months, sel:msel, kind:"month"},
+    {head:"日", vals:days, sel:dsel, kind:"day"},
+    {head:"时", vals:hours, sel:(s.hu?24:s.h), kind:"hour"},
+    {head:"分", vals:minutes, sel:(s.minU?60:s.min), kind:"min"}
+  ];
+}
+function labelOf(v, kind){
+  if(v === "未知") return "未知";
+  if(kind === "gz") return v;
+  if(kind === "year") return String(v);
+  if(kind === "month" && typeof v === "object") return v.label;
+  return pad2(v);
+}
+function renderPkHeads(defs){
+  document.getElementById("pkHeads").innerHTML = defs.map(d =>
+    `<div>${d.head}</div>`
+  ).join("");
+}
+function syncPkSpacers(force){
+  const wheel = document.getElementById("pkWheel");
+  const h = wheel ? wheel.clientHeight : 0;
+  if(!force && h === PK.wheelH) return;
+  PK.wheelH = h;
+  const sp = Math.max(0, Math.round((h - ITEM_H)/2));
+  document.querySelectorAll("#pkCols .pk-spacer").forEach(el => { el.style.height = sp + "px"; });
+}
+function fillPkCol(i, def, doScroll){
+  const sc = document.getElementById("pkSc"+i);
+  if(!sc) return;
+  const wheel = document.getElementById("pkWheel");
+  const h = (wheel && wheel.clientHeight) || PK.wheelH || ITEM_H*3;
+  const sp = Math.max(0, Math.round((h - ITEM_H)/2));
+  sc.innerHTML = `<div class="pk-spacer" style="height:${sp}px"></div>` +
+    def.vals.map((v,j) => `<div class="pk-item${j===def.sel?" on":""}" data-i="${j}">${labelOf(v, def.kind)}</div>`).join("") +
+    `<div class="pk-spacer" style="height:${sp}px"></div>`;
+  if(doScroll !== false){
+    sc.dataset.lock = "1";        // 吞掉程序滚动触发的伪 scroll 事件
+    sc.scrollTop = def.sel * ITEM_H;
+  }
+}
+function scrollPkCol(i, idx){
+  const sc = document.getElementById("pkSc"+i);
+  if(!sc) return;
+  try{ sc.scrollTo({top:idx*ITEM_H, behavior:"smooth"}); }
+  catch(e){ sc.scrollTop = idx*ITEM_H; }
+}
+function fullRender(){
+  clearTimeout(PK.timer);
+  PK.snapTimers.forEach(t => clearTimeout(t));
+  PK.snapTimers = [];
+  if(!PK.inited) initPillars();
+  const defs = buildPkDefs();
+  PK.defs = defs;
+  renderPkHeads(defs);
+  document.getElementById("pkCols").innerHTML = defs.map((_,i) =>
+    `<div class="pk-col"><div class="pk-scroll" id="pkSc${i}" onclick="pkColClick(event,${i})"></div></div>`
+  ).join("");
+  defs.forEach((_,i) => { document.getElementById("pkSc"+i).onscroll = () => onPkScroll(i); });
+  defs.forEach((d,i) => fillPkCol(i, d, false));
+  syncPkSpacers(true);
+  defs.forEach((d,i) => {
+    const sc = document.getElementById("pkSc"+i);
+    if(sc) sc.scrollTop = d.sel * ITEM_H;
+  });
+  PK.rendered = true;
+  requestAnimationFrame(() => {
+    syncPkSpacers();
+    PK.defs.forEach((d,i) => {
+      const sc = document.getElementById("pkSc"+i);
+      if(sc) sc.scrollTop = d.sel * ITEM_H;
+    });
+  });
+}
+function relayoutPk(){
+  if(!PK.rendered || PK.view !== "pick") return;
+  syncPkSpacers(true);
+  PK.defs.forEach((d,i) => {
+    const sc = document.getElementById("pkSc"+i);
+    if(sc) sc.scrollTop = d.sel * ITEM_H;
+  });
+}
+function pkColClick(e, i){
+  const it = e.target.closest(".pk-item");
+  if(!it) return;
+  const idx = parseInt(it.dataset.i, 10);
+  if(!isNaN(idx)) scrollPkCol(i, idx);
+}
+function onPkScroll(i){
+  const sc = document.getElementById("pkSc"+i);
+  const def = PK.defs && PK.defs[i];
+  if(!sc || !def) return;
+  if(sc.dataset.lock){ delete sc.dataset.lock; return; }   // 程序滚动，忽略
+  let idx = Math.round(sc.scrollTop / ITEM_H);
+  idx = Math.max(0, Math.min(def.vals.length-1, idx));
+  const items = sc.querySelectorAll(".pk-item");
+  const prev = sc.querySelector(".pk-item.on");
+  if(prev) prev.classList.remove("on");
+  if(items[idx]) items[idx].classList.add("on");
+  schedulePkSnap(i);
+  if(idx === def.sel) return;
+  def.sel = idx;
+  applyPkValue(i, def.vals[idx], idx);
+}
+function schedulePkSnap(i){
+  clearTimeout(PK.snapTimers[i]);
+  PK.snapTimers[i] = setTimeout(() => {
+    const sc = document.getElementById("pkSc"+i);
+    const def = PK.defs && PK.defs[i];
+    if(!sc || !def) return;
+    const target = def.sel * ITEM_H;
+    if(Math.abs(sc.scrollTop - target) > 1){
+      try{ sc.scrollTo({top:target, behavior:"smooth"}); }
+      catch(e){ sc.scrollTop = target; }
+    }
+  }, 180);
+}
+function applyPkValue(i, val, idx){
+  if(PK.mode === "pillars"){ PK.pil[i] = idx; return; }
+  const s = pkDate();
+  if(i === 0){
+    s.y = val;
+    schedulePkDateRebuild();
+  }else if(i === 1){
+    if(PK.mode === "greg"){ s.m = val; }
+    else { s.m = val.m; s.leap = val.leap; }
+    clampPkDay();
+    rebuildPkDay();
+  }else if(i === 2){
+    s.d = val;
+  }else if(i === 3){
+    if(val === "未知"){
+      s.hu = true; s.minU = true; s.h = 0; s.min = 0;
+      rebuildPkMinute();
+    }else{
+      s.hu = false; s.h = val;
+    }
+  }else if(i === 4){
+    if(val === "未知"){ s.minU = true; s.min = 0; }
+    else { s.minU = false; s.min = val; }
+  }
+  renderPkLive();
+}
+function clampPkDay(){
+  const s = pkDate();
+  if(PK.mode === "greg"){
+    s.d = Math.min(s.d, daysInMonth(s.y, s.m));
+  }else{
+    const info = lunarYearInfo(s.y);
+    const idx = lunarMonthIndex(info, s.m, s.leap);
+    const mo = info.months[idx];
+    s.m = mo.m; s.leap = mo.leap;
+    s.d = Math.min(s.d, mo.days);
+  }
+}
+function rebuildPkDay(){
+  PK.defs = buildPkDefs();
+  fillPkCol(2, PK.defs[2], true);
+}
+function rebuildPkMinute(){
+  PK.defs = buildPkDefs();
+  fillPkCol(4, PK.defs[4], true);
+}
+function schedulePkDateRebuild(){
+  clearTimeout(PK.timer);
+  PK.timer = setTimeout(() => {
+    if(PK.mode === "pillars") return;
+    clampPkDay();
+    PK.defs = buildPkDefs();
+    fillPkCol(1, PK.defs[1], true);
+    fillPkCol(2, PK.defs[2], true);
+  }, 300);
+}
+function togglePkOrder(ev){
+  if(ev) ev.stopPropagation();
+  if(PK.mode === "pillars") return;
+  PK.desc = !PK.desc;
+  PK.defs = buildPkDefs();
+  fillPkCol(0, PK.defs[0], true);
+}
+
+/* 模式 / 按钮 */
+function updatePkModeUI(){
+  document.querySelectorAll("#pkSeg button").forEach(b => b.classList.toggle("on", b.dataset.m === PK.mode));
+  const inp = document.getElementById("pkInput");
+  if(PK.mode === "pillars"){
+    inp.placeholder = "输入四柱（如 甲子乙丑丙寅丁卯）";
+    inp.setAttribute("inputmode", "text");
+  }else{
+    inp.placeholder = "输入出生年月日时分(格式199303270255)";
+    inp.setAttribute("inputmode", "numeric");
+  }
+  inp.value = "";
+}
+function setPkMode(m){
+  if(m === PK.mode) return;
+  if(m === "lunar" && !LUNAR_FMT){ alert("当前浏览器不支持农历换算"); return; }
+  if(m === "lunar" && PK.mode === "greg") pkGregToLunar();
+  if(m === "greg" && PK.mode === "lunar") pkLunarToGreg();
+  if(m === "pillars"){
+    const r = pkCalcFromDate();
+    let hIdx = 0;
+    if(r.hour){ hIdx = gzIdx(r.hour[0], r.hour[1]); }
+    else{
+      const s = pkDate();
+      const g = pkDateToGreg(s);
+      const rr = pillarsOf(g.y, g.m, g.d, 0, 0);
+      hIdx = gzIdx(rr.hour[0], rr.hour[1]);
+    }
+    PK.pil = [gzIdx(r.year[0],r.year[1]), gzIdx(r.month[0],r.month[1]), gzIdx(r.day[0],r.day[1]), hIdx];
+  }
+  PK.mode = m;
+  PK.view = "pick";
+  updatePkModeUI();
+  fullRender();
+}
+function pkToday(){
+  const now = new Date();
+  const y=now.getFullYear(), m=now.getMonth()+1, d=now.getDate(), h=now.getHours(), mi=now.getMinutes();
+  if(PK.mode === "pillars"){
+    const r = pillarsOf(y,m,d,h,mi);
+    PK.pil = [gzIdx(r.year[0],r.year[1]), gzIdx(r.month[0],r.month[1]), gzIdx(r.day[0],r.day[1]), gzIdx(r.hour[0],r.hour[1])];
+  }else if(PK.mode === "greg"){
+    PK.greg = {y, m, d, h, min:mi, hu:false, minU:false};
+  }else{
+    if(!LUNAR_FMT){ alert("当前浏览器不支持农历换算"); return; }
+    const lp = lunarPartsFromDate(y, m, d);
+    PK.lunar = {y:lp.y, m:lp.m, leap:lp.leap, d:lp.d, h, min:mi, hu:false, minU:false};
+  }
+  fullRender();
+}
+/* 页面「今」按钮：回到当前日期时间 */
+function pkTodayInline(){
+  pkToday();
+  renderPkLive();
+}
+function pkQuery(){
+  const raw = document.getElementById("pkInput").value.trim();
+  if(!raw) return;
+  if(PK.mode === "pillars"){ pkQueryPillars(raw); return; }
+  if(PK.mode === "lunar" && !LUNAR_FMT){ alert("当前浏览器不支持农历换算"); return; }
+  const digits = raw.replace(/\D/g, "");
+  if(digits.length!==8 && digits.length!==10 && digits.length!==12){
+    alert("请输入 8、10 或 12 位数字，例如 199303270255");
+    return;
+  }
+  const y = +digits.slice(0,4), mo = +digits.slice(4,6), d = +digits.slice(6,8);
+  if(y<1900 || y>2100 || mo<1 || mo>12){ alert("日期超出范围（1900—2100）"); return; }
+  let h=0, mi=0, hu=false, minU=false;
+  if(digits.length >= 10) h = +digits.slice(8,10); else { hu=true; minU=true; }
+  if(digits.length >= 12) mi = +digits.slice(10,12); else if(digits.length===10){ minU=true; }
+  if(PK.mode === "greg"){
+    if(d<1 || d>daysInMonth(y,mo)){ alert("该月没有这一天"); return; }
+    if(!hu && (h<0 || h>23)){ alert("小时应在 00—23"); return; }
+    if(!minU && (mi<0 || mi>59)){ alert("分钟应在 00—59"); return; }
+    PK.greg = {y, m:mo, d, h, min:mi, hu, minU};
+  }else{
+    if(d<1 || d>30){ alert("农历日期不正确"); return; }
+    const info = lunarYearInfo(y);
+    const mm = info.months.find(x => x.m===mo && !x.leap) || info.months.find(x => x.m===mo);
+    if(!mm){ alert("该农历年没有这个月"); return; }
+    if(d > mm.days){ alert("农历"+LUNAR_MONTH[mo]+"只有 "+mm.days+" 天"); return; }
+    PK.lunar = {y, m:mo, leap:mm.leap, d, h, min:mi, hu, minU};
+  }
+  fullRender();
+}
+function pkQueryPillars(raw){
+  const chars = raw.replace(/[\s,，、|/\-]/g, "");
+  if(chars.length !== 8){ alert("请输入四组干支，如 甲子乙丑丙寅丁卯"); return; }
+  const arr = [];
+  for(let i=0;i<8;i+=2){
+    const pair = chars.slice(i, i+2);
+    const idx = GZ60.indexOf(pair);
+    if(idx < 0){ alert("「"+pair+"」不是有效干支组合"); return; }
+    arr.push(idx);
+  }
+  PK.pil = arr;
+  document.getElementById("pkInput").value = arr.map(i => GZ60[i]).join(" ");
+  fullRender();
+}
+
+/* 确定 / 结果 */
+function pkTimeText(s){
+  if(s.hu) return "时分未知";
+  if(s.minU) return pad2(s.h)+":??";
+  return pad2(s.h)+":"+pad2(s.min);
+}
+function pkInfoLine(){
+  if(PK.mode === "pillars") return "直接选取四柱";
+  const s = pkDate();
+  if(PK.mode === "lunar"){
+    const g = lunarToGreg(s.y, s.m, s.leap, s.d);
+    return `农历 ${s.y}年${s.leap?"闰":""}${LUNAR_MONTH[s.m]}${lunarDayName(s.d)} · 公历 ${g.y}-${pad2(g.m)}-${pad2(g.d)} ${pkTimeText(s)}`;
+  }
+  return `公历 ${s.y}-${pad2(s.m)}-${pad2(s.d)} ${pkTimeText(s)}`;
+}
+/* 每柱下方的公历 / 农历小字 */
+function pkColLines(r){
+  const g = PK.greg;
+  const lp = LUNAR_FMT ? lunarPartsFromDate(g.y, g.m, g.d) : null;
+  return [
+    [String(g.y), SHENGXIAO[r.year[1]] + "年"],
+    [g.m + "月", lp ? (lp.leap ? "闰" : "") + LUNAR_MONTH[lp.m] : "—"],
+    [pad2(g.d) + "日", lp ? lunarDayName(lp.d) : "—"],
+    [pkTimeText(g), r.hour ? ZHI[r.hour[1]] + "时" : "未知"]
+  ];
+}
+/* 融合四柱卡渲染 */
+function renderPkGrid(r){
+  const lines = pkColLines(r);
+  const col = (head, pair, ln)=>{
+    const gc = pair ? `style="color:${EL_COLOR[GAN_EL[pair[0]]]}"` : 'style="color:var(--ink-faint);font-size:20px"';
+    const zc = pair ? `style="color:${EL_COLOR[ZHI_EL[pair[1]]]}"` : 'style="visibility:hidden"';
+    return `<div class="pl-col">
+      <div class="pl-head">${head}</div>
+      <div class="pl-gan" ${gc}>${pair ? GAN[pair[0]] : "未知"}</div>
+      <div class="pl-zhi" ${zc}>${pair ? ZHI[pair[1]] : ""}</div>
+      <div class="pl-div"></div>
+      <div class="pl-line g">${ln[0]}</div>
+      <div class="pl-line l">${ln[1]}</div>
+    </div>`;
+  };
+  document.getElementById("pillarGrid").innerHTML =
+    col("年柱",r.year,lines[0]) + col("月柱",r.month,lines[1]) + col("日柱",r.day,lines[2]) + col("时柱",r.hour,lines[3]);
+  document.getElementById("pillarNote").innerHTML =
+    `日主 <b>${GAN[r.dayGan]}${GAN_EL[r.dayGan]}</b>　生肖 <b>${SHENGXIAO[r.sx]}</b>`;
+}
+/* 滚轮联动：按当前时间重算四柱并刷新 */
+function renderPkLive(){
+  const g = PK.greg;
+  const h = g.hu ? 0 : g.h;
+  const mi = (g.hu || g.minU) ? 0 : g.min;
+  const r = pillarsOf(g.y, g.m, g.d, h, mi);
+  if(g.hu) r.hour = null;
+  PK.lastResult = r;
+  renderPkGrid(r);
+  const btn = document.getElementById("pkSaveBtn");
+  btn.disabled = false;
+  btn.textContent = "保存";
+}
+function savePkRecord(){
+  if(!PK.lastResult) return;
+  const r = PK.lastResult;
+  const rec = { t:Date.now(), q:document.getElementById("pkNote").value.trim(), src:PK.mode, pil:[], g:null, l:null };
+  rec.pil = [gzIdx(r.year[0],r.year[1]), gzIdx(r.month[0],r.month[1]), gzIdx(r.day[0],r.day[1]), r.hour ? gzIdx(r.hour[0],r.hour[1]) : -1];
+  if(PK.mode !== "pillars"){
+    const s = pkDate();
+    const gd = pkDateToGreg(s);
+    rec.g = {y:gd.y, m:gd.m, d:gd.d, h:s.hu?0:s.h, min:(s.hu||s.minU)?0:s.min, hu:s.hu, minU:s.minU};
+    if(PK.mode === "lunar") rec.l = {y:s.y, m:s.m, leap:s.leap, d:s.d, h:s.h, min:s.min, hu:s.hu, minU:s.minU};
+  }
+  const list = loadPkHist();
+  list.unshift(rec);
+  if(list.length > MAX_PK) list.length = MAX_PK;
+  if(!savePkHist(list)) return;
+  const btn = document.getElementById("pkSaveBtn");
+  btn.disabled = true;
+  btn.textContent = "已保存";
+  renderPkHist();
+}
+window.addEventListener("resize", ()=>{
+  if(PK.rendered && document.getElementById("pagePillars").style.display !== "none"){
+    relayoutPk();
+  }
+});
+
+
+/* ================= 交互 ================= */
+let pendingSave = null;
+
+function randomFill(){
+  document.getElementById("in1").value = 1+Math.floor(Math.random()*8);
+  document.getElementById("in2").value = 1+Math.floor(Math.random()*8);
+  document.getElementById("in3").value = 1+Math.floor(Math.random()*6);
+}
+function doCalc(){
+  const q = parseInt(document.getElementById("in1").value)||0;
+  const w = parseInt(document.getElementById("in2").value)||0;
+  const e = parseInt(document.getElementById("in3").value)||0;
+  if(q<1||q>8||w<1||w>8||e<1||e>6){
+    alert("请输入：上卦数 1-8、下卦数 1-8、动爻数 1-6");
+    return;
+  }
+  const r = calc(q,w,e);
+  render(r);
+  // 排盘后由用户填写事项、决定是否保存（保存时才读取事项）
+  const tiIdx = (r.ti === r.ben[0]) ? 0 : 1;
+  pendingSave = {
+    t: Date.now(),
+    nums: [q,w,e],
+    six: [r.ben[0].name, r.ben[1].name, r.hu[0].name, r.hu[1].name, r.bian[0].name, r.bian[1].name],
+    tiIdx: tiIdx
+  };
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = false;
+  btn.textContent = "保存";
+}
+
+/* ================= 历史记录 ================= */
+const HKEY = "mhys_history";
+const MAX_RECORDS = 5000;   // 上限：占localStorage约4成水位，各浏览器都安全
+let editingIdx = -1;
+function loadHist(){ try{return JSON.parse(localStorage.getItem(HKEY))||[];}catch(e){return [];} }
+/* 写存储：满了就提示先导出不丢数据 */
+function saveHist(list){
+  try{ localStorage.setItem(HKEY, JSON.stringify(list)); return true; }
+  catch(e){
+    alert("存储空间不足，保存失败！\n请先用记录页的「导出」备份全部记录，再清理旧记录。");
+    return false;
+  }
+}
+/* 由起数重建完整记录（导入/兼容旧记录用） */
+function recordFromNums(t, q, nums, judge){
+  const r = calc(nums[0], nums[1], nums[2]);
+  return { t, q, nums: nums.slice(0,3),
+    six: [r.ben[0].name, r.ben[1].name, r.hu[0].name, r.hu[1].name, r.bian[0].name, r.bian[1].name],
+    tiIdx: (r.ti === r.ben[0]) ? 0 : 1,
+    judge };
+}
+function doSave(){
+  if(!pendingSave) return;
+  pendingSave.q = document.getElementById("question2").value.trim();  // 保存时才读事项
+  const list = loadHist();
+  list.unshift(pendingSave);
+  if(list.length>MAX_RECORDS) list.length=MAX_RECORDS;
+  if(!saveHist(list)) return;
+  pendingSave = null;
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  btn.textContent = "已保存";
+  renderHist();
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function reloadHist(i){
+  const h = loadHist()[i]; if(!h) return;
+  document.getElementById("question2").value = h.q||"";
+  document.getElementById("in1").value = h.nums[0];
+  document.getElementById("in2").value = h.nums[1];
+  document.getElementById("in3").value = h.nums[2];
+  doCalc();
+}
+function clearHist(){
+  if(confirm("确定清空全部记录？")){ localStorage.removeItem(HKEY); editingIdx=-1; renderHist(); }
+}
+function startEdit(i, ev){
+  ev.stopPropagation();
+  editingIdx = i;
+  renderHist();
+  const inp = document.getElementById("editQ");
+  if(inp){ inp.focus(); }
+}
+function commitEdit(i, ev){
+  ev.stopPropagation();
+  const v = document.getElementById("editQ").value.trim();
+  const list = loadHist();
+  if(list[i]){ list[i].q = v; saveHist(list); }
+  editingIdx = -1;
+  renderHist();
+}
+function cancelEdit(ev){
+  ev.stopPropagation();
+  editingIdx = -1;
+  renderHist();
+}
+function delHist(i, ev){
+  ev.stopPropagation();
+  if(!confirm("删除这条记录？")) return;
+  const list = loadHist();
+  list.splice(i,1);
+  saveHist(list);
+  editingIdx = -1;
+  renderHist();
+}
+/* 单按钮循环切换对错：未评→对→错→未评 */
+function cycleJudge(i, ev){
+  ev.stopPropagation();
+  const list = loadHist();
+  const h = list[i]; if(!h) return;
+  h.judge = h.judge==='对' ? '错' : (h.judge==='错' ? undefined : '对');
+  saveHist(list);
+  renderHist();
+}
+
+/* ================= 四柱历史记录 ================= */
+const PKKEY = "mhys_pkhist";
+const MAX_PK = 5000;
+let pkEditingIdx = -1;
+let pkRangeStart = null, pkRangeEnd = null;
+function loadPkHist(){ try{return JSON.parse(localStorage.getItem(PKKEY))||[];}catch(e){return [];} }
+function savePkHist(list){
+  try{ localStorage.setItem(PKKEY, JSON.stringify(list)); return true; }
+  catch(e){ alert("存储空间不足，保存四柱记录失败！"); return false; }
+}
+function pkGzHtml(idx){
+  if(idx === undefined || idx === null || idx < 0) return '<span class="gz-unknown">未知</span>';
+  const g = idx%10, z = idx%12;
+  return `<b style="color:${EL_COLOR[GAN_EL[g]]}">${GAN[g]}</b>${ZHI[z]}`;
+}
+function pkDel(i, ev){
+  ev.stopPropagation();
+  if(!confirm("删除这条四柱记录？")) return;
+  const list = loadPkHist();
+  list.splice(i,1);
+  savePkHist(list);
+  pkEditingIdx = -1;
+  renderPkHist();
+}
+function pkEdit(i, ev){
+  ev.stopPropagation();
+  pkEditingIdx = i;
+  renderPkHist();
+  const inp = document.getElementById("pkEditQ");
+  if(inp) inp.focus();
+}
+function pkCommit(i, ev){
+  ev.stopPropagation();
+  const v = document.getElementById("pkEditQ").value.trim();
+  const list = loadPkHist();
+  if(list[i]){ list[i].q = v; savePkHist(list); }
+  pkEditingIdx = -1;
+  renderPkHist();
+}
+function pkCancelEdit(ev){
+  ev.stopPropagation();
+  pkEditingIdx = -1;
+  renderPkHist();
+}
+function clearPkHist(){
+  if(confirm("确定清空全部四柱记录？")){ localStorage.removeItem(PKKEY); pkEditingIdx=-1; renderPkHist(); }
+}
+function pkSyncDateInputs(){
+  document.getElementById("pkDateStart").value = fmtDate(pkRangeStart);
+  document.getElementById("pkDateEnd").value = fmtDate(pkRangeEnd);
+}
+function setDefaultPkRange(){
+  pkEditingIdx = -1;
+  const now = new Date(); now.setHours(0,0,0,0);
+  pkRangeEnd = new Date(now);
+  pkRangeStart = new Date(now);
+  pkRangeStart.setDate(now.getDate()-29);
+  pkSyncDateInputs(); renderPkHist();
+}
+function onPkRangeInput(){
+  const sv = document.getElementById("pkDateStart").value;
+  const evv = document.getElementById("pkDateEnd").value;
+  if(!sv || !evv) return;
+  pkRangeStart = new Date(sv+"T00:00:00");
+  pkRangeEnd = new Date(evv+"T00:00:00");
+  if(pkRangeStart > pkRangeEnd){ const t=pkRangeStart; pkRangeStart=pkRangeEnd; pkRangeEnd=t; pkSyncDateInputs(); }
+  pkEditingIdx = -1;
+  renderPkHist();
+}
+function renderPkHist(){
+  const s = new Date(pkRangeStart); s.setHours(0,0,0,0);
+  const e = new Date(pkRangeEnd); e.setHours(0,0,0,0);
+  const eNext = e.getTime() + 86400000;
+  const master = loadPkHist();
+  const items = master.map((h,i)=>({h,i})).filter(o=>o.h.t>=s.getTime() && o.h.t<eNext);
+  document.getElementById("pkHistCount").textContent = `共 ${items.length} 条`;
+  const box = document.getElementById("pkHistList");
+  if(!items.length){ box.innerHTML = `<div class="empty">该时段暂无四柱记录</div>`; return; }
+  const byMonth = (e.getTime()-s.getTime())/86400000 > 62;
+  const groupKey = (t)=>{
+    const d = new Date(t);
+    if(byMonth) return `${d.getFullYear()}年${d.getMonth()+1}月`;
+    if(s.getTime()===e.getTime()) return "";
+    return `${d.getMonth()+1}月${d.getDate()}日 周${WK[d.getDay()]}`;
+  };
+  const timeStr = (t)=>{
+    const d = new Date(t);
+    const hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    return byMonth ? `${d.getMonth()+1}/${d.getDate()} ${hm}` : hm;
+  };
+  let html = "", lastKey = null;
+  for(const {h,i} of items){
+    const k = groupKey(h.t);
+    if(k !== lastKey){ if(k) html += `<div class="group-head">${k}</div>`; lastKey = k; }
+    let topRow;
+    if(i === pkEditingIdx){
+      topRow = `<div class="edit-row">
+        <input id="pkEditQ" value="${escapeHtml(h.q||"")}" onclick="event.stopPropagation()">
+        <button onclick="pkCommit(${i},event)">✓</button>
+        <button class="cancel" onclick="pkCancelEdit(event)">✗</button>
+      </div>`;
+    }else{
+      topRow = `<div class="hist-q${h.q?"":" empty-q"}">${h.q?escapeHtml(h.q):"（无备注）"}</div>
+        <button class="edit-btn" onclick="pkEdit(${i},event)">改</button>
+        <button class="edit-btn del" onclick="pkDel(${i},event)">删</button>`;
+    }
+    const meta = `<div class="hist-meta">${timeStr(h.t)}</div>
+      <div class="hist-meta">年 ${pkGzHtml(h.pil[0])}　月 ${pkGzHtml(h.pil[1])}　日 ${pkGzHtml(h.pil[2])}　时 ${pkGzHtml(h.pil[3])}</div>`;
+    html += `<div class="hist-item pk-hist-item"><div class="hist-top">${topRow}</div>${meta}</div>`;
+  }
+  box.innerHTML = html;
+}
+
+/* ================= 导出 / 导入 ================= */
+function fmtT(t){
+  const d=new Date(t), p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+/* 生成可读文本：首行时间+事项，次行体卦五行打头的六行+起数 */
+function exportText(){
+  const list = loadHist().slice().sort((a,b)=>b.t-a.t);
+  const out = [`时毅排盘记录 · 导出于 ${fmtT(Date.now())} · 共 ${list.length} 条`, ""];
+  let skip = 0;
+  for(const h of list){
+    if(!h.nums || h.nums.length<3){ skip++; continue; }
+    let six = h.six, tiIdx = h.tiIdx;
+    if(!six || six.length!==6){ const rr = recordFromNums(h.t, "", h.nums); six = rr.six; tiIdx = rr.tiIdx; }
+    const tiEl = six[tiIdx].slice(1);
+    const others = six.filter((_,i)=>i!==tiIdx).map(n=>n.slice(1)).join("");
+    out.push(`【${fmtT(h.t)}】${(h.q||"").replace(/[\r\n]+/g," ")}`);
+    out.push(`${tiEl}（体）${others} ${h.nums[0]}-${h.nums[1]}-${h.nums[2]}${h.judge?` ${h.judge}`:""}`);
+    out.push("");
+  }
+  if(skip) out.push(`（另有 ${skip} 条缺起数，未导出）`);
+  return out.join("\n");
+}
+/* 解析导入文本：只认【时间】行与三起数，五行行忽略（导入时重算） */
+function parseImport(text){
+  const lines = text.split(/\r?\n/);
+  const recs = []; let bad = 0, cur = null;
+  const headRe = /^【(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})】\s*(.*)$/;
+  const numRe = /(\d{1,2})\s*[-—–~]\s*(\d{1,2})\s*[-—–~]\s*(\d{1,2})/;
+  const finish = ()=>{
+    if(!cur) return;
+    if(cur.nums) recs.push(recordFromNums(cur.t, cur.q, cur.nums, cur.judge)); else bad++;
+    cur = null;
+  };
+  for(const ln of lines){
+    const m = ln.match(headRe);
+    if(m){
+      finish();
+      const t = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5]).getTime();
+      cur = isNaN(t) ? null : { t, q:(m[6]||"").trim(), nums:null };
+      continue;
+    }
+    if(cur && !cur.nums){
+      const nm = ln.match(numRe);
+      if(nm){
+        const a=+nm[1], b=+nm[2], c=+nm[3];
+        if(a>=1&&a<=8&&b>=1&&b<=8&&c>=1&&c<=6){
+          cur.nums=[a,b,c];
+          const jm = ln.match(/([对错])\s*$/);   // 行尾 对/错 标记
+          cur.judge = jm ? jm[1] : undefined;
+        }
+      }
+    }
+  }
+  finish();
+  return { recs, bad };
+}
+function openExport(){
+  document.getElementById("ioTitle").textContent = "导出记录（复制后可存备忘录/微信收藏）";
+  const ta = document.getElementById("ioText");
+  ta.readOnly = true;
+  ta.value = loadHist().length ? exportText() : "（暂无记录）";
+  document.getElementById("ioBtns").innerHTML =
+    `<button class="btn-ink" onclick="copyIO()">复制</button><button class="btn-sub" onclick="closeIO()">关闭</button>`;
+  document.getElementById("ioMask").style.display = "flex";
+}
+function openImport(){
+  document.getElementById("ioTitle").textContent = "导入记录（粘贴导出的文本）";
+  const ta = document.getElementById("ioText");
+  ta.readOnly = false;
+  ta.value = "";
+  ta.placeholder = "【2026-09-06 21:30】事项\n火（体）木金金火水 3-5-3";
+  document.getElementById("ioBtns").innerHTML =
+    `<button class="btn-ink" onclick="doImport('merge')">新增导入</button>` +
+    `<button class="btn-seal" onclick="doImport('overwrite')">覆盖导入</button>` +
+    `<button class="btn-sub" onclick="closeIO()">取消</button>`;
+  document.getElementById("ioMask").style.display = "flex";
+}
+function closeIO(){ document.getElementById("ioMask").style.display = "none"; }
+async function copyIO(){
+  const t = document.getElementById("ioText").value;
+  try{ await navigator.clipboard.writeText(t); alert("已复制到剪贴板"); }
+  catch(e){
+    const ta = document.getElementById("ioText");
+    ta.readOnly = false; ta.focus(); ta.select(); ta.readOnly = true;
+    try{ document.execCommand("copy"); alert("已复制到剪贴板"); }
+    catch(_){ alert("复制失败，请长按文本全选手动复制"); }
+  }
+}
+/* mode: merge=新增导入(按时间戳去重) / overwrite=覆盖导入 */
+function doImport(mode){
+  const text = document.getElementById("ioText").value;
+  const {recs, bad} = parseImport(text);
+  if(!recs.length){ alert(bad?`未能识别任何记录（${bad} 个区块格式不完整）`:"没有识别到任何记录"); return; }
+  if(mode==="overwrite"){
+    if(!confirm(`覆盖导入将删除现有全部记录，替换为文本中的 ${recs.length} 条。确定？`)) return;
+    const seen = new Set(), list = [];
+    for(const r of recs){ if(seen.has(r.t)) continue; seen.add(r.t); list.push(r); }
+    list.sort((a,b)=>b.t-a.t);
+    if(list.length>MAX_RECORDS) list.length = MAX_RECORDS;
+    if(!saveHist(list)) return;
+    alert(`覆盖导入完成：共 ${list.length} 条` + (bad?`（跳过无法识别 ${bad} 条）`:""));
+  }else{
+    const cur = loadHist();
+    const seen = new Set(cur.map(h=>h.t));
+    let added = 0, dup = 0;
+    for(const r of recs){ if(seen.has(r.t)){ dup++; continue; } seen.add(r.t); cur.push(r); added++; }
+    cur.sort((a,b)=>b.t-a.t);
+    if(cur.length>MAX_RECORDS) cur.length = MAX_RECORDS;
+    if(!saveHist(cur)) return;
+    alert(`新增导入完成：新增 ${added} 条` + (dup?`，跳过重复 ${dup} 条`:"") + (bad?`，无法识别 ${bad} 条`:""));
+  }
+  editingIdx = -1;
+  closeIO();
+  renderHist();
+}
+
+function switchTab(p){
+  const isCalc = p === "calc";
+  document.getElementById("pageCalc").style.display = isCalc ? "flex" : "none";
+  document.getElementById("pagePillars").style.display = isCalc ? "none" : "flex";
+  document.getElementById("tabCalc").classList.toggle("on", isCalc);
+  document.getElementById("tabPillars").classList.toggle("on", !isCalc);
+  if(!isCalc){ requestAnimationFrame(relayoutPk); renderPkHist(); }
+}
+
+/* ----- 记录浮层（各页独立） ----- */
+function openHist(){
+  document.getElementById("histMask").style.display = "flex";
+  renderHist();
+}
+function closeHist(){
+  document.getElementById("histMask").style.display = "none";
+  editingIdx = -1;
+}
+function openRecords(){
+  document.getElementById("recMask").style.display = "flex";
+  renderPkHist();
+}
+function closeRecords(){
+  document.getElementById("recMask").style.display = "none";
+  pkEditingIdx = -1;
+}
+
+/* ----- 记录筛选：日期范围（默认最近30天） ----- */
+let rangeStart = new Date();
+let rangeEnd = new Date();
+
+function fmtDate(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function syncDateInputs(){
+  document.getElementById("dateStart").value = fmtDate(rangeStart);
+  document.getElementById("dateEnd").value = fmtDate(rangeEnd);
+}
+function setDefaultRange(){
+  editingIdx = -1;
+  const now = new Date(); now.setHours(0,0,0,0);
+  rangeEnd = new Date(now);
+  rangeStart = new Date(now);
+  rangeStart.setDate(now.getDate()-29);   // 默认最近30天
+  syncDateInputs(); renderHist();
+}
+/* 手动选择日期范围 */
+function onRangeInput(){
+  const sv = document.getElementById("dateStart").value;
+  const evv = document.getElementById("dateEnd").value;
+  if(!sv || !evv) return;
+  rangeStart = new Date(sv+"T00:00:00");
+  rangeEnd = new Date(evv+"T00:00:00");
+  if(rangeStart > rangeEnd){ const t=rangeStart; rangeStart=rangeEnd; rangeEnd=t; syncDateInputs(); }
+  editingIdx = -1;
+  renderHist();
+}
+const WK = "日一二三四五六";
+/* 小卦名着色 */
+function gcol(n){ return `<b style="color:${EL_COLOR[n.slice(1)]}">${n}</b>`; }
+
+function renderHist(){
+  const s = new Date(rangeStart); s.setHours(0,0,0,0);
+  const e = new Date(rangeEnd); e.setHours(0,0,0,0);
+  const eNext = e.getTime() + 86400000;   // 结束日含全天
+
+  // 过滤
+  const master = loadHist();
+  const items = master.map((h,i)=>({h,i})).filter(o=>o.h.t>=s.getTime() && o.h.t<eNext);
+  document.getElementById("histCount").textContent = `共 ${items.length} 条`;
+
+  // 对/错统计（当前范围）
+  const nY = items.filter(o=>o.h.judge==='对').length;
+  const nN = items.filter(o=>o.h.judge==='错').length;
+  const nU = items.length - nY - nN;
+  const judged = nY + nN;
+  const rate = judged ? Math.round(nY/judged*100) : null;
+  const seg = (n,bg)=>`<i style="width:${(n/items.length*100).toFixed(1)}%;background:${bg}"></i>`;
+  const segs = (nY?seg(nY,"var(--seal)"):"") + (nN?seg(nN,"var(--ink)"):"") + (nU?seg(nU,"#c9c2ae"):"");
+  document.getElementById("histStats").innerHTML =
+    `<div class="hs-bar">${items.length?segs:""}</div>` +
+    `<div class="hs-txt">共 ${items.length} 条　对 ${nY} · 错 ${nN} · 未评 ${nU}${rate!==null?`　对率 ${rate}%`:""}</div>`;
+
+  const box = document.getElementById("histList");
+  if(!items.length){ box.innerHTML = `<div class="empty">该时段暂无记录</div>`; return; }
+
+  // 跨度超过两个月按月分组，否则按天分组
+  const byMonth = (e.getTime()-s.getTime())/86400000 > 62;
+  const groupKey = (t)=>{
+    const d = new Date(t);
+    if(byMonth) return `${d.getFullYear()}年${d.getMonth()+1}月`;
+    if(s.getTime()===e.getTime()) return "";
+    return `${d.getMonth()+1}月${d.getDate()}日 周${WK[d.getDay()]}`;
+  };
+  const timeStr = (t)=>{
+    const d = new Date(t);
+    const hm = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    return byMonth ? `${d.getMonth()+1}/${d.getDate()} ${hm}` : hm;
+  };
+
+  let html = "", lastKey = null;
+  for(const {h,i} of items){
+    const k = groupKey(h.t);
+    if(k !== lastKey){ if(k) html += `<div class="group-head">${k}</div>`; lastKey = k; }
+
+    // 事项行：查看态 / 编辑态
+    let topRow;
+    if(i === editingIdx){
+      topRow = `<div class="edit-row">
+        <input id="editQ" value="${escapeHtml(h.q||"")}" onclick="event.stopPropagation()">
+        <button onclick="commitEdit(${i},event)">✓</button>
+        <button class="cancel" onclick="cancelEdit(event)">✗</button>
+      </div>`;
+    }else{
+      const jCls = h.judge==='对' ? ' j-on' : (h.judge==='错' ? ' j-err' : '');
+      topRow = `<button class="judge-btn${jCls}" onclick="cycleJudge(${i},event)">${h.judge||"未评"}</button>
+        <div class="hist-q${h.q?"":" empty-q"}">${h.q?escapeHtml(h.q):"（无事项）"}</div>
+        <button class="edit-btn" onclick="startEdit(${i},event)">改</button>
+        <button class="edit-btn del" onclick="delHist(${i},event)">删</button>`;
+    }
+
+    // 体卦 + 其余五小卦（旧格式记录回退显示本→变）
+    let meta;
+    if(h.six && h.six.length===6){
+      const others = h.six.filter((_,idx)=>idx!==h.tiIdx);
+      meta = `<div class="hist-meta">${timeStr(h.t)}　<span class="ti-mark">体</span>${gcol(h.six[h.tiIdx])}</div>
+              <div class="hist-meta">${others.map(gcol).join(" · ")}</div>`;
+    }else{
+      meta = `<div class="hist-meta">${timeStr(h.t)} ｜ ${escapeHtml(h.ben||"")} → ${escapeHtml(h.bian||"")}</div>`;
+    }
+
+    html += `<div class="hist-item" onclick="reloadHist(${i})">
+      <div class="hist-top">${topRow}</div>${meta}
+    </div>`;
+  }
+  box.innerHTML = html;
+}
+
+initPillars();
+PK.mode = "greg";
+fullRender();
+renderPkLive();
+setDefaultRange();
+setDefaultPkRange();
+</script>
+</body>
+</html>

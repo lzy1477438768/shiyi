@@ -1,0 +1,15 @@
+{
+  "name": "yijing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "时毅 Android APK 打包工程",
+  "scripts": {
+    "sync": "npx cap sync android",
+    "build:android": "npx cap add android || true && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  }
+}

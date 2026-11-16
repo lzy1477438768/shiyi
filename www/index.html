@@ -145,9 +145,10 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
   .rec-body{flex:1; min-height:0; display:flex; flex-direction:column;}
   #histCard{flex:1; display:flex; flex-direction:column; min-height:0; margin-bottom:0;}
   .range-row{display:flex; align-items:center; gap:6px; margin-bottom:6px;}
-  .range-row input[type=date]{flex:1; min-width:0; padding:5px 4px; font-size:13px;}
+  .range-row input[type=date]{flex:1; min-width:0; padding:7px 5px; font-size:13px;}
   .range-row span{color:var(--ink-soft);}
-  .hist-count{font-size:12px; white-space:nowrap; letter-spacing:1px;}
+  .hist-count{font-size:12px; letter-spacing:1px;}
+  .pk-hist-count{color:var(--ink-soft); margin:0 0 6px 2px;}
   #histList{flex:1; min-height:0; overflow-y:auto;}
   .group-head{
     font-size:12px; color:var(--ink-soft); border-bottom:1px solid var(--line);
@@ -237,13 +238,24 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
 
   /* 四柱页 */
   #pagePillars{flex:1; display:flex; flex-direction:column; min-height:0;}
-  .rec-btn{flex:none; margin-top:10px; padding:9px 0; font-size:14px;}
+  .pk-hist-btn{
+    flex:none; margin-left:auto; height:30px; padding:0 12px; border:1px solid var(--line);
+    background:transparent; color:var(--ink-soft); font-size:12.5px;
+    border-radius:999px; letter-spacing:1px; font-family:inherit;
+  }
   .pk-toprow{flex:none; display:flex; align-items:center; gap:8px;}
   .pk-toprow .pk-heads{flex:1; min-width:0; margin-top:0;}
   #pagePillars .pk-today{width:30px; height:30px; font-size:13px; font-family:inherit;}
   #pagePillars .pk-heads{flex:none; margin-top:2px;}
-  #pagePillars .pk-wheel{flex:none; height:192px; margin-top:2px;}
-  .pk-result-body{flex:none;}
+  #pagePillars .pk-wheel{
+    flex:none; height:156px; margin-top:8px;
+    border-top:1px dashed var(--line);
+  }
+  #pagePillars .pk-result-body{
+    flex:none; margin-top:8px; padding:10px 6px 6px;
+    border:1px solid var(--line); border-radius:6px;
+    background:rgba(255,253,244,.9);
+  }
   #pkHistCard{flex:1; min-height:0; display:flex; flex-direction:column;}
   #pkHistList{flex:1; min-height:0; overflow-y:auto; margin-top:6px;}
   .pk-picker{flex:1; min-height:0; display:flex; flex-direction:column;}
@@ -288,8 +300,8 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
     mask-image:linear-gradient(to bottom, transparent 0, #000 20%, #000 80%, transparent 100%);
   }
   .pk-band{
-    position:absolute; left:0; right:0; top:calc(50% - 32px); height:64px;
-    border-radius:10px; background:rgba(42,39,33,.065); pointer-events:none;
+    position:absolute; left:0; right:0; top:calc(50% - 26px); height:52px;
+    border-radius:8px; background:rgba(42,39,33,.065); pointer-events:none;
   }
   .pk-cols{position:relative; height:100%; display:flex;}
   .pk-col{flex:1; min-width:0; height:100%;}
@@ -299,11 +311,11 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
   }
   .pk-scroll::-webkit-scrollbar{display:none;}
   .pk-item{
-    height:64px; display:flex; align-items:center; justify-content:center;
-    color:var(--ink-faint); font-size:19px; line-height:1; white-space:nowrap;
+    height:52px; display:flex; align-items:center; justify-content:center;
+    color:var(--ink-faint); font-size:17px; line-height:1; white-space:nowrap;
     transition:color .12s, font-size .12s;
   }
-  .pk-item.on{color:var(--ink); font-size:25px; font-weight:bold;}
+  .pk-item.on{color:var(--ink); font-size:22px; font-weight:bold;}
   .pk-result{flex:1; min-height:0; display:flex; flex-direction:column;}
   .pk-result-top{flex:none; display:flex; align-items:center; justify-content:space-between; padding-bottom:6px;}
   .pk-result-title{font-size:12.5px; color:var(--ink-soft); letter-spacing:2px;}
@@ -318,7 +330,7 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
   .pl-head{font-size:12.5px; color:var(--ink-soft); letter-spacing:3px;}
   .pl-gan,.pl-zhi{font-size:40px; line-height:1.18; font-weight:bold;}
   .pl-gan{margin-top:4px;}
-  .pl-note{margin-top:14px; font-size:12.5px; color:var(--ink-soft); letter-spacing:1px; text-align:center;}
+  .pl-note{margin-top:10px; font-size:12.5px; color:var(--ink-soft); letter-spacing:1px; text-align:center;}
   .pl-note b{color:var(--ink);}
   .pl-sub{margin-top:6px; font-size:11px; color:var(--ink-faint); letter-spacing:.5px; text-align:center; line-height:1.6;}
   /* 每柱下的公历 / 农历小字 */
@@ -327,7 +339,7 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
   .pl-line.g{color:var(--ink-soft);}
   .pl-line.l{color:var(--ink-faint);}
 </style>
-<script src="/_aistudio-iframe.js?v=1f94f900"></script></head>
+</head>
 <body>
 <div class="wrap">
   <div class="topbar">
@@ -370,22 +382,22 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
       <div class="pk-toprow">
         <div class="pk-heads" id="pkHeads"></div>
         <button class="pk-today" onclick="pkTodayInline()">今</button>
-      </div>
-      <div class="pk-wheel" id="pkWheel">
-        <div class="pk-band"></div>
-        <div class="pk-cols" id="pkCols"></div>
+        <button class="pk-hist-btn" onclick="openRecords()">历史记录</button>
       </div>
       <div class="pk-result-body">
         <div class="pillar-grid" id="pillarGrid"></div>
       </div>
       <div class="pl-note" id="pillarNote"></div>
+      <div class="pk-wheel" id="pkWheel">
+        <div class="pk-band"></div>
+        <div class="pk-cols" id="pkCols"></div>
+      </div>
       <div class="qrow pk-save-row">
         <span class="qlabel">备注</span>
         <input id="pkNote">
         <button class="btn-seal" id="pkSaveBtn" onclick="savePkRecord()">保存</button>
       </div>
     </div>
-    <button class="btn-sub rec-btn" onclick="openRecords()">历史记录</button>
   </div>
 </div>
 
@@ -402,7 +414,6 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
           <input type="date" id="dateStart" onchange="onRangeInput()">
           <span>~</span>
           <input type="date" id="dateEnd" onchange="onRangeInput()">
-          <span class="hist-count" id="histCount"></span>
         </div>
         <div class="hist-stats" id="histStats"></div>
         <div id="histList"></div>
@@ -429,8 +440,8 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
           <input type="date" id="pkDateStart" onchange="onPkRangeInput()">
           <span>~</span>
           <input type="date" id="pkDateEnd" onchange="onPkRangeInput()">
-          <span class="hist-count" id="pkHistCount"></span>
         </div>
+        <div class="hist-count pk-hist-count" id="pkHistCount"></div>
         <div id="pkHistList"></div>
         <div class="io-row">
           <button class="btn-sub" onclick="clearPkHist()">清空</button>
@@ -768,7 +779,7 @@ function render(r){
 }
 
 /* ================= 四柱滚轮 ================= */
-const ITEM_H = 64;
+const ITEM_H = 52;
 const pad2 = n => String(n).padStart(2, "0");
 const PK = {
   inited:false, rendered:false, mode:"greg", desc:false, view:"pick", adj:"t",
@@ -1350,7 +1361,7 @@ function cycleJudge(i, ev){
 const PKKEY = "mhys_pkhist";
 const MAX_PK = 5000;
 let pkEditingIdx = -1;
-let pkRangeStart = null, pkRangeEnd = null;
+let pkRangeStart = null, pkRangeEnd = null, pkRangeAuto = true;
 function loadPkHist(){ try{return JSON.parse(localStorage.getItem(PKKEY))||[];}catch(e){return [];} }
 function savePkHist(list){
   try{ localStorage.setItem(PKKEY, JSON.stringify(list)); return true; }
@@ -1394,47 +1405,57 @@ function clearPkHist(){
   if(confirm("确定清空全部四柱记录？")){ localStorage.removeItem(PKKEY); pkEditingIdx=-1; renderPkHist(); }
 }
 function pkSyncDateInputs(){
-  document.getElementById("pkDateStart").value = fmtDate(pkRangeStart);
-  document.getElementById("pkDateEnd").value = fmtDate(pkRangeEnd);
+  document.getElementById("pkDateStart").value = pkRangeStart ? fmtDate(pkRangeStart) : "";
+  document.getElementById("pkDateEnd").value = pkRangeEnd ? fmtDate(pkRangeEnd) : "";
 }
 function setDefaultPkRange(){
   pkEditingIdx = -1;
-  const now = new Date(); now.setHours(0,0,0,0);
-  pkRangeEnd = new Date(now);
-  pkRangeStart = new Date(now);
-  pkRangeStart.setDate(now.getDate()-29);
-  pkSyncDateInputs(); renderPkHist();
+  pkRangeAuto = true;
+  pkRangeStart = null; pkRangeEnd = null;
+  renderPkHist();
 }
 function onPkRangeInput(){
   const sv = document.getElementById("pkDateStart").value;
   const evv = document.getElementById("pkDateEnd").value;
-  if(!sv || !evv) return;
-  pkRangeStart = new Date(sv+"T00:00:00");
-  pkRangeEnd = new Date(evv+"T00:00:00");
-  if(pkRangeStart > pkRangeEnd){ const t=pkRangeStart; pkRangeStart=pkRangeEnd; pkRangeEnd=t; pkSyncDateInputs(); }
+  pkRangeStart = sv ? new Date(sv+"T00:00:00") : null;
+  pkRangeEnd = evv ? new Date(evv+"T00:00:00") : null;
+  pkRangeAuto = !(pkRangeStart || pkRangeEnd);
+  if(pkRangeStart && pkRangeEnd && pkRangeStart > pkRangeEnd){
+    const t=pkRangeStart; pkRangeStart=pkRangeEnd; pkRangeEnd=t; pkSyncDateInputs();
+  }
   pkEditingIdx = -1;
   renderPkHist();
 }
 function renderPkHist(){
-  const s = new Date(pkRangeStart); s.setHours(0,0,0,0);
-  const e = new Date(pkRangeEnd); e.setHours(0,0,0,0);
-  const eNext = e.getTime() + 86400000;
+  const s = pkRangeStart ? new Date(pkRangeStart) : null;
+  const e = pkRangeEnd ? new Date(pkRangeEnd) : null;
+  if(s) s.setHours(0,0,0,0);
+  if(e) e.setHours(0,0,0,0);
+  const eNext = e ? e.getTime() + 86400000 : null;
   const master = loadPkHist();
-  const items = master.map((h,i)=>({h,i})).filter(o=>o.h.t>=s.getTime() && o.h.t<eNext);
-  document.getElementById("pkHistCount").textContent = `共 ${items.length} 条`;
+  const matched = (pkRangeAuto
+      ? master.map((h,i)=>({h,i}))
+      : master.map((h,i)=>({h,i})).filter(o=> (!s || o.h.t>=s.getTime()) && (eNext===null || o.h.t<eNext))
+    ).sort((a,b)=>b.h.t-a.h.t);
+  const items = matched.slice(0, HIST_LIMIT);
+  if(pkRangeAuto){
+    const d0 = items.length ? new Date(items[items.length-1].h.t) : new Date();
+    const d1 = items.length ? new Date(items[0].h.t) : new Date();
+    document.getElementById("pkDateStart").value = fmtDate(d0);
+    document.getElementById("pkDateEnd").value = fmtDate(d1);
+  }
+  document.getElementById("pkHistCount").textContent =
+    `共 ${matched.length} 条` + (matched.length>HIST_LIMIT ? `（显示最近 ${HIST_LIMIT} 条）` : "");
   const box = document.getElementById("pkHistList");
-  if(!items.length){ box.innerHTML = `<div class="empty">该时段暂无四柱记录</div>`; return; }
-  const byMonth = (e.getTime()-s.getTime())/86400000 > 62;
+  if(!items.length){ box.innerHTML = `<div class="empty">${(pkRangeStart||pkRangeEnd)?"该时段暂无四柱记录":"暂无四柱记录"}</div>`; return; }
+  // 固定按天分组，分组头显示年月日
   const groupKey = (t)=>{
     const d = new Date(t);
-    if(byMonth) return `${d.getFullYear()}年${d.getMonth()+1}月`;
-    if(s.getTime()===e.getTime()) return "";
-    return `${d.getMonth()+1}月${d.getDate()}日 周${WK[d.getDay()]}`;
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 周${WK[d.getDay()]}`;
   };
   const timeStr = (t)=>{
     const d = new Date(t);
-    const hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    return byMonth ? `${d.getMonth()+1}/${d.getDate()} ${hm}` : hm;
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   };
   let html = "", lastKey = null;
   for(const {h,i} of items){
@@ -1588,7 +1609,7 @@ function switchTab(p){
 /* ----- 记录浮层（各页独立） ----- */
 function openHist(){
   document.getElementById("histMask").style.display = "flex";
-  renderHist();
+  setDefaultRange();
 }
 function closeHist(){
   document.getElementById("histMask").style.display = "none";
@@ -1596,40 +1617,42 @@ function closeHist(){
 }
 function openRecords(){
   document.getElementById("recMask").style.display = "flex";
-  renderPkHist();
+  setDefaultPkRange();
 }
 function closeRecords(){
   document.getElementById("recMask").style.display = "none";
   pkEditingIdx = -1;
 }
 
-/* ----- 记录筛选：日期范围（默认最近30天） ----- */
-let rangeStart = new Date();
-let rangeEnd = new Date();
+/* ----- 记录筛选：日期框默认回显最近 30 条的跨度（仅显示，不参与筛选） ----- */
+let rangeStart = null;
+let rangeEnd = null;
+let rangeAuto = true;
+const HIST_LIMIT = 30;
 
 function fmtDate(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 function syncDateInputs(){
-  document.getElementById("dateStart").value = fmtDate(rangeStart);
-  document.getElementById("dateEnd").value = fmtDate(rangeEnd);
+  document.getElementById("dateStart").value = rangeStart ? fmtDate(rangeStart) : "";
+  document.getElementById("dateEnd").value = rangeEnd ? fmtDate(rangeEnd) : "";
 }
 function setDefaultRange(){
   editingIdx = -1;
-  const now = new Date(); now.setHours(0,0,0,0);
-  rangeEnd = new Date(now);
-  rangeStart = new Date(now);
-  rangeStart.setDate(now.getDate()-29);   // 默认最近30天
-  syncDateInputs(); renderHist();
+  rangeAuto = true;
+  rangeStart = null; rangeEnd = null;
+  renderHist();
 }
-/* 手动选择日期范围 */
+/* 手动选择日期范围（允许只填一端；两端都清空则回到自动回显） */
 function onRangeInput(){
   const sv = document.getElementById("dateStart").value;
   const evv = document.getElementById("dateEnd").value;
-  if(!sv || !evv) return;
-  rangeStart = new Date(sv+"T00:00:00");
-  rangeEnd = new Date(evv+"T00:00:00");
-  if(rangeStart > rangeEnd){ const t=rangeStart; rangeStart=rangeEnd; rangeEnd=t; syncDateInputs(); }
+  rangeStart = sv ? new Date(sv+"T00:00:00") : null;
+  rangeEnd = evv ? new Date(evv+"T00:00:00") : null;
+  rangeAuto = !(rangeStart || rangeEnd);
+  if(rangeStart && rangeEnd && rangeStart > rangeEnd){
+    const t=rangeStart; rangeStart=rangeEnd; rangeEnd=t; syncDateInputs();
+  }
   editingIdx = -1;
   renderHist();
 }
@@ -1638,16 +1661,28 @@ const WK = "日一二三四五六";
 function gcol(n){ return `<b style="color:${EL_COLOR[n.slice(1)]}">${n}</b>`; }
 
 function renderHist(){
-  const s = new Date(rangeStart); s.setHours(0,0,0,0);
-  const e = new Date(rangeEnd); e.setHours(0,0,0,0);
-  const eNext = e.getTime() + 86400000;   // 结束日含全天
+  const s = rangeStart ? new Date(rangeStart) : null;
+  const e = rangeEnd ? new Date(rangeEnd) : null;
+  if(s) s.setHours(0,0,0,0);
+  if(e) e.setHours(0,0,0,0);
+  const eNext = e ? e.getTime() + 86400000 : null;   // 结束日含全天
 
-  // 过滤
+  // rangeAuto 时不做日期过滤，只回显最近 30 条的跨度
   const master = loadHist();
-  const items = master.map((h,i)=>({h,i})).filter(o=>o.h.t>=s.getTime() && o.h.t<eNext);
-  document.getElementById("histCount").textContent = `共 ${items.length} 条`;
+  const matched = (rangeAuto
+      ? master.map((h,i)=>({h,i}))
+      : master.map((h,i)=>({h,i})).filter(o=> (!s || o.h.t>=s.getTime()) && (eNext===null || o.h.t<eNext))
+    ).sort((a,b)=>b.h.t-a.h.t);
+  const items = matched.slice(0, HIST_LIMIT);
+  if(rangeAuto){
+    const d0 = items.length ? new Date(items[items.length-1].h.t) : new Date();
+    const d1 = items.length ? new Date(items[0].h.t) : new Date();
+    document.getElementById("dateStart").value = fmtDate(d0);
+    document.getElementById("dateEnd").value = fmtDate(d1);
+  }
+  const countTxt = `共 ${matched.length} 条` + (matched.length>HIST_LIMIT ? `（显示最近 ${HIST_LIMIT} 条）` : "");
 
-  // 对/错统计（当前范围）
+  // 对/错统计（当前显示范围）
   const nY = items.filter(o=>o.h.judge==='对').length;
   const nN = items.filter(o=>o.h.judge==='错').length;
   const nU = items.length - nY - nN;
@@ -1657,23 +1692,20 @@ function renderHist(){
   const segs = (nY?seg(nY,"var(--seal)"):"") + (nN?seg(nN,"var(--ink)"):"") + (nU?seg(nU,"#c9c2ae"):"");
   document.getElementById("histStats").innerHTML =
     `<div class="hs-bar">${items.length?segs:""}</div>` +
-    `<div class="hs-txt">共 ${items.length} 条　对 ${nY} · 错 ${nN} · 未评 ${nU}${rate!==null?`　对率 ${rate}%`:""}</div>`;
+    `<div class="hs-txt">${countTxt}</div>` +
+    `<div class="hs-txt">对 ${nY} · 错 ${nN} · 未评 ${nU}${rate!==null?`　对率 ${rate}%`:""}</div>`;
 
   const box = document.getElementById("histList");
-  if(!items.length){ box.innerHTML = `<div class="empty">该时段暂无记录</div>`; return; }
+  if(!items.length){ box.innerHTML = `<div class="empty">${(rangeStart||rangeEnd)?"该时段暂无记录":"暂无记录"}</div>`; return; }
 
-  // 跨度超过两个月按月分组，否则按天分组
-  const byMonth = (e.getTime()-s.getTime())/86400000 > 62;
+  // 固定按天分组，分组头显示年月日
   const groupKey = (t)=>{
     const d = new Date(t);
-    if(byMonth) return `${d.getFullYear()}年${d.getMonth()+1}月`;
-    if(s.getTime()===e.getTime()) return "";
-    return `${d.getMonth()+1}月${d.getDate()}日 周${WK[d.getDay()]}`;
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 周${WK[d.getDay()]}`;
   };
   const timeStr = (t)=>{
     const d = new Date(t);
-    const hm = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-    return byMonth ? `${d.getMonth()+1}/${d.getDate()} ${hm}` : hm;
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
   };
 
   let html = "", lastKey = null;
